@@ -1,0 +1,7 @@
+source_file = example.csv
+source_header_row_num = 0
+target-file = example2.csv
+target_header_row_num = 1
+output_file_name = output.csv
+target_columns = Favorite Color,fav color
+match_by = Social Security Number,ssn
