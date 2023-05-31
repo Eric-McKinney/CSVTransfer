@@ -6,52 +6,61 @@ Only one column can be used to match by, however. This "matching" is necessary b
 copy-paste of a column, rather the data might be in a different order or might not have the same number of rows.
 
 
-Constants
+Config variables
 
-SOURCE_FILE (string): The name of csv file which the data will be drawn from. The file should be in the same directory
+- source_file (string): The name of csv file which the data will be drawn from. The file should be in the same directory
 as this script.
-SOURCE_HEADER_ROW_NUM (int): Row number to use as header (rows before will be ignored). Row numbers start at 0.
-TARGET_FILE (string): The name of csv file which the data will be put into. The file should be in the same directory as
+- source_header_row_num (int): Row number to use as header (rows before will be ignored). Row numbers start at 0.
+- target_file (string): The name of csv file which the data will be put into. The file should be in the same directory as
 this script.
-TARGET_HEADER_ROW_NUM (int): Row number to use as header (rows before will be ignored). Row numbers start at 0.
-OUTPUT_FILE_NAME (string): The name of the resulting csv file (include the file extension).
-TARGET_COLUMNS (dictionary/map K: string, V: string): Indicates the source & destination column pair(s). The source 
+- target_header_row_num (int): Row number to use as header (rows before will be ignored). Row numbers start at 0.
+- output_file_name (string): The name of the resulting csv file (include the file extension).
+- target_columns (dictionary/map K: string, V: string): Indicates the source & destination column pair(s). The source
 column is the key and the destination column is the associated value.
-MATCH_BY (tuple string, string): The column in each csv file to match the data by (e.g. serial number). The data in
+- match_by (tuple string, string): The column in each csv file to match the data by (e.g. serial number). The data in
 these columns should be shared or mostly the same between the two files. The names of the columns don't need to match.
 """
 import sys
 
-SOURCE_FILE: str = "DNCA EIT - Inventory Sheet.csv"
-SOURCE_HEADER_ROW_NUM = 0
-TARGET_FILE: str = "lansweeper.csv"
-TARGET_HEADER_ROW_NUM = 1
-OUTPUT_FILE_NAME: str = "output.csv"
-TARGET_COLUMNS: dict[str: str] = {"Asset Tag Number": "Asset Tag"}  # source col: destination col
-MATCH_BY: tuple[str, str] = ("Serial Number", "Serialnumber")  # col in source, col in target
+# Custom types for clarity
+Header = str
+Data = str | int
+Row = dict[Header: Data]
+
+source_file: str = ""
+source_header_row_num = 0
+target_file: str = ""
+target_header_row_num = 0
+output_file_name: str = ""
+target_columns: Row = {}  # source col: destination col
+match_by: tuple[str, str] = ("", "")  # col in source, col in target
 
 
 def main():
     read_from_file: bool = input("Read constants from a file (y/[n])? ").lower() in ["y", "yes"]
-
-    if read_from_file:
-        constants_file_name: str = input("Please type the name of the file: ")
-        try:
-            with open(constants_file_name) as f:
-                pass
-        except FileNotFoundError:
-            print("Could not find file. Make sure the file is in the same directory as this script.", file=sys.stderr)
-            exit(1)
-    else:
-        pass
-
+    get_constants(read_from_file)
+    parsed_source: list[Row] = parse_csv(source_file)
+    parsed_target: list[Row] = parse_csv(target_file)
     # parse source and target csv files
     # move data in list of dicts
     # write new csv file
     pass
 
 
-def parse_csv(file_name: str) -> list[dict[str: str]]:
+def get_constants(from_file: bool):
+    if from_file:
+        constants_file_name: str = input("Please type the name of the file: ")
+        try:
+            with open(constants_file_name) as f:
+                f.readline()
+        except FileNotFoundError:
+            print("Could not find file. Make sure the file is in the same directory as this script.", file=sys.stderr)
+            exit(1)
+    else:
+        pass
+
+
+def parse_csv(file_name: str) -> list[Row]:
     # read into list of dicts and return
     with open(file_name) as csvfile:
         lines = csvfile.readlines()
