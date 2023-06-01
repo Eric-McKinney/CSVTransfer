@@ -27,50 +27,49 @@ Header = str
 Data = str
 Row = dict[Header: Data]
 
-source_file: str = ""
-source_header_row_num = 0
-target_file: str = ""
-target_header_row_num = 0
-output_file_name: str = ""
-target_columns: Row = {}  # source col: destination col
-match_by: tuple[str, str] = ("", "")  # col in source, col in target
-
 
 def main():
     read_from_file: bool = input("Read constants from a file (y/[n])? ").lower() in ["y", "yes"]
-    get_constants(read_from_file)
-    parsed_source: list[Row] = parse_csv(source_file, source_header_row_num)
-    parsed_target: list[Row] = parse_csv(target_file, target_header_row_num)
+    constants: dict[str: str | int | Row | tuple[str, str]] = get_constants(read_from_file)
+    parsed_source: list[Row] = parse_csv(constants["source_file"], constants["source_header_row_num"])
+    parsed_target: list[Row] = parse_csv(constants["target_file"], constants["target_header_row_num"])
 
     # move data in list of dicts
     # write new csv file
     pass
 
 
-def get_constants(from_file: bool):
-    global source_file, source_header_row_num, target_file, target_header_row_num, output_file_name, target_columns
-    global match_by
+def get_constants(from_file: bool) -> dict[str: str | int | Row | tuple[str, str]]:
+    constants: dict[str: str | int | Row | tuple[str, str]] = {
+        "source_file": "",
+        "source_header_row_num": 0,
+        "target_file": "",
+        "target_header_row_num": 0,
+        "output_file_name": "",
+        "target_columns": {},  # source col: destination col
+        "match_by": ("", "")  # col in source, col in target
+    }
 
     if from_file:
         constants_file_name: str = input("Please type the name of the file: ")
         try:
             with open(constants_file_name) as f:
-                source_file = f.readline().split(" = ")[-1]
-                source_header_row_num = int(f.readline().split(" = ")[-1])
-                target_file = f.readline().split(" = ")[-1]
-                target_header_row_num = int(f.readline().split(" = ")[-1])
-                output_file_name = f.readline().split(" = ")[-1]
+                constants["source_file"] = f.readline().split(" = ")[-1]
+                constants["source_header_row_num"] = int(f.readline().split(" = ")[-1])
+                constants["target_file"] = f.readline().split(" = ")[-1]
+                constants["target_header_row_num"] = int(f.readline().split(" = ")[-1])
+                constants["output_file_name"] = f.readline().split(" = ")[-1]
                 target_columns_str: str = f.readline().split(" = ")[-1]
                 match_by_str: str = f.readline().split(" = ")[-1]
         except FileNotFoundError:
             print("Could not find file. Make sure the file is in the same directory as this script.", file=sys.stderr)
             exit(1)
     else:
-        source_file = input("What is the name of the file the data will be drawn from? ")
-        source_header_row_num = int(input("What row contains the headers (first row is 0)? "))
-        target_file = input("What is the name of the file which should be copied with the data put in it? ")
-        target_header_row_num = int(input("What row contains the headers (first row is 0)? "))
-        output_file_name = input("Give a name for the output file (including file extension): ")
+        constants["source_file"] = input("What is the name of the file the data will be drawn from? ")
+        constants["source_header_row_num"] = int(input("What row contains the headers (first row is 0)? "))
+        constants["target_file"] = input("What is the name of the file which should be copied with the data put in it? ")
+        constants["target_header_row_num"] = int(input("What row contains the headers (first row is 0)? "))
+        constants["output_file_name"] = input("Give a name for the output file (including file extension): ")
         target_columns_str: str = input("Give a comma separated list of the columns of data to be moved in pairs of "
                                         "sources and destinations (in that order).\nEx: source1,dest1,source2,dest2"
                                         "\nEnter here: ")
@@ -85,7 +84,10 @@ def get_constants(from_file: bool):
         else:
             prev = col
 
-    match_by = tuple(match_by_str.split(","))
+    constants["target_columns"] = target_columns
+    constants["match_by"] = tuple(match_by_str.split(","))
+
+    return constants
 
 
 def parse_csv(file_name: str, header_line_num: int) -> list[Row]:
