@@ -25,7 +25,7 @@ def main():
     print("DONE")
 
     print("Transferring data...", end="", flush=True)
-    transfer_data(parsed_source, parsed_target, constants)
+    transfer_data(parsed_source, parsed_target, constants["target_columns"], constants["match_by"])
     print("DONE\nWriting results to output file...", end="", flush=True)
     write_csv(constants["output_file_name"], parsed_target)
     print(f"DONE\n\nResults can be found in {constants['output_file_name']}")
@@ -118,29 +118,43 @@ def parse_csv(file_name: str, header_line_num: int) -> list[Row]:
     try:
         with open(file_name) as csvfile:
             lines = csvfile.readlines()
-
-            # removing pesky newlines
-            for i, line in enumerate(lines):
-                lines[i] = line.rstrip()
-
-            headers: list[str] = []
-            rows: list[Row] = []
-            for i, line in enumerate(lines):
-                if i < header_line_num:
-                    continue
-                elif i == header_line_num:
-                    headers = line.split(",")
-                else:
-                    row = {k: v for (k, v) in zip(headers, line.split(","))}
-                    rows.append(row)
     except FileNotFoundError:
         print(f"Could not find {file_name}", file=sys.stderr)
         exit(1)
 
+    # removing newlines and checking for quotes
+    lines_with_quotes: list[int] = []
+    for i, line in enumerate(lines):
+        lines[i] = line.rstrip()
+
+        if i >= header_line_num and "\"" in line:
+            lines_with_quotes.append(i)
+
+    headers: list[str] = []
+    rows: list[Row] = []
+    for i, line in enumerate(lines):
+        if i < header_line_num:
+            continue
+
+        if i in lines_with_quotes:
+            line = normalize_line_with_quotes(line)
+
+        if i == header_line_num:
+            headers = line.split(",")
+        else:
+            rows.append({k: v for (k, v) in zip(headers, line.split(","))})
+
     return rows
 
 
-def transfer_data(source: list[Row], target: list[Row], constants: dict) -> None:
+def normalize_line_with_quotes(line: str) -> str:
+    separated_by_quoted_item: list[str] = line.split("\"")
+
+    quoted_item = separated_by_quoted_item[1]
+
+
+def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str: str],
+                  match_by: tuple[str, str]) -> None:
     """
     Moves data from target column(s) (keys of target_columns dictionary) in the parsed source file to the target
     column(s) (values of target_columns dictionary) in the parsed target file. This is done for all the values in the
@@ -150,7 +164,8 @@ def transfer_data(source: list[Row], target: list[Row], constants: dict) -> None
 
     :param source: Parsed source file
     :param target: Parsed target file
-    :param constants: Dictionary of constants
+    :param target_columns: Column(s) whose data will be transferred in source-destination pairs
+    :param match_by: Column from each file to align data by in order of source, target
     :return:
     """
 
