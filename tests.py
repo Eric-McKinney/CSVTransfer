@@ -18,6 +18,17 @@ class MyTestCase(unittest.TestCase):
 
         self.assertEqual(parsed_csv, expected_parsed_csv)
 
+    def test_parse_csv2(self):
+        parsed_csv: list[main.Row] = main.parse_csv("example2.csv", 0)
+        expected_parsed_csv: list[main.Row] = [
+            {"name": "First Last", "ssn": "234111", "fav color": "", "state of residence": "Ohio"},
+            {"name": "", "ssn": "987654321", "fav color": "Orange", "state of residence": "Texas"},
+            {"name": "John Smith", "ssn": "123456", "fav color": "", "state of residence": "Michigan"},
+            {"name": "", "ssn": "1234321", "fav color": "", "state of residence": ""}
+        ]
+
+        self.assertEqual(parsed_csv, expected_parsed_csv)
+
 
 if __name__ == '__main__':
     unittest.main()
