@@ -5,21 +5,6 @@ This script will transfer data from one csv to another into a new file. Any numb
 Only one column from each csv can be used to match by, however. This "matching" is necessary because the transfer might
 not just be a copy-paste of a column, rather the data might be in a different order or might not have the same number of
 rows.
-
-
-Config variables
-
-- source_file (string): The name of csv file which the data will be drawn from. The file should be in the same directory
-as this script.
-- source_header_row_num (int): Row number to use as header (rows before will be ignored). Row numbers start at 0.
-- target_file (string): The name of csv file which the data will be put into. The file should be in the same directory
-as this script.
-- target_header_row_num (int): Row number to use as header (rows before will be ignored). Row numbers start at 0.
-- output_file_name (string): The name of the resulting csv file (include the file extension).
-- target_columns (dictionary/map K: string, V: string): Indicates the source & destination column pair(s). The source
-column is the key and the destination column is the associated value.
-- match_by (tuple string, string): The column in each csv file to match the data by (e.g. serial number). The data in
-these columns should be shared or mostly the same between the two files. The names of the columns don't need to match.
 """
 import sys
 from time import sleep
@@ -47,6 +32,26 @@ def main():
 
 
 def get_constants(from_file: bool) -> dict:
+    """
+    Assigns constants either from a file or from stdin. The constants are as follows:
+
+    - source_file (string): The name of csv file which the data will be drawn from.
+      The file should be in the same directory as this script.
+    - source_header_row_num (int): Row number to use as header (rows before will be ignored). Row numbers start at 0.
+    - target_file (string): The name of csv file which the data will be put into. The file should be in the same
+      directory as this script.
+    - target_header_row_num (int): Row number to use as header (rows before will be ignored). Row numbers start at 0.
+    - output_file_name (string): The name of the resulting csv file (include the file extension).
+    - target_columns (dictionary/map K: string, V: string): Indicates the source & destination column pair(s). The
+      source column is the key and the destination column is the associated value.
+    - match_by (tuple string, string): The column in each csv file to match the data by (e.g. serial number). The data
+      in these columns should be shared or mostly the same between the two files. The names of the columns don't need to
+      match.
+
+    :param from_file: True if the constants should be loaded from a file, false if constants should be given via stdin
+    :return: Dictionary of the constants where the keys are the name of the constants
+    """
+
     constants: dict = {
         "source_file": "",
         "source_header_row_num": 0,
@@ -61,6 +66,7 @@ def get_constants(from_file: bool) -> dict:
         constants_file_name: str = input("Please type the name of the file: ")
         try:
             with open(constants_file_name) as f:
+                # Each line is split at the " = " and the latter half is used (without the newline)
                 constants["source_file"] = f.readline().split(" = ")[-1].rstrip()
                 constants["source_header_row_num"] = int(f.readline().split(" = ")[-1].rstrip())
                 constants["target_file"] = f.readline().split(" = ")[-1].rstrip()
@@ -83,6 +89,7 @@ def get_constants(from_file: bool) -> dict:
         match_by_str: str = input("Give the names of the columns which the data being transferred should be matched by "
                                   "in the order of source then target.\nEx: serialnum,serial number\nEnter here: ")
 
+    # Converting from a comma separated list to a dictionary
     target_columns = {}
     prev: str = ""
     for i, col in enumerate(target_columns_str.split(",")):
@@ -92,16 +99,27 @@ def get_constants(from_file: bool) -> dict:
             prev = col
 
     constants["target_columns"] = target_columns
-    constants["match_by"] = tuple(match_by_str.split(","))
+    constants["match_by"] = tuple(match_by_str.split(","))  # Converting from a comma separated pair to a tuple
 
     return constants
 
 
 def parse_csv(file_name: str, header_line_num: int) -> list[Row]:
+    """
+    Parses a csv file into a list of its rows. Each row is put into a dictionary where the keys are the headers for a
+    column and the values are the elements of that row. Rows before the header row are ignored. The header row is not an
+    element of the list, but is represented in every element of the list by the key values.
+
+    :param file_name: name of file to parse
+    :param header_line_num: line number of the headers (starts at 0)
+    :return: List of the rows of the csv
+    """
+
     try:
         with open(file_name) as csvfile:
             lines = csvfile.readlines()
 
+            # removing pesky newlines
             for i, line in enumerate(lines):
                 lines[i] = line.rstrip()
 
@@ -123,11 +141,33 @@ def parse_csv(file_name: str, header_line_num: int) -> list[Row]:
 
 
 def transfer_data(source: list[Row], target: list[Row], constants: dict) -> None:
+    """
+    Moves data from target column(s) (keys of target_columns dictionary) in the parsed source file to the target
+    column(s) (values of target_columns dictionary) in the parsed target file. This is done for all the values in the
+    source file from the column specified by match_by (the first string). If a value in the source file from the column
+    specified by match_by does not have a matching value in the target file in the corresponding match_by column (second
+    string) then the data for that value is not transferred.
+
+    :param source: Parsed source file
+    :param target: Parsed target file
+    :param constants: Dictionary of constants
+    :return:
+    """
+
     sleep(2)
     pass
 
 
 def write_csv(file_name: str, data: list[Row]) -> None:
+    """
+    Formats and writes data to a csv from a list of rows where each row is a dictionary containing keys which are the
+    headers and values which are the elements of that row. If there is no file by the given name, one will be created.
+
+    :param file_name: Name of file to be written to or created
+    :param data: Data to write to the file
+    :return:
+    """
+
     sleep(2)
     pass
 
