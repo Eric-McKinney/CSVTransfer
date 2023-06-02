@@ -29,6 +29,27 @@ class MyTestCase(unittest.TestCase):
 
         self.assertEqual(parsed_csv, expected_parsed_csv)
 
+    def test_normalize_line(self):
+        line1: str = "one,two,three"
+        line2: str = "one,\"two, three\""
+        line3: str = "\"one, two\",three"
+        line4: str = "one,\"two, three\",four"
+
+        normalized_line1: str = main.normalize_line_with_quotes(line1)
+        normalized_line2: str = main.normalize_line_with_quotes(line2)
+        normalized_line3: str = main.normalize_line_with_quotes(line3)
+        normalized_line4: str = main.normalize_line_with_quotes(line4)
+
+        expected_normalized1: str = "one,two,three"
+        expected_normalized2: str = "one,two three"
+        expected_normalized3: str = "one two,three"
+        expected_normalized4: str = "one,two three,four"
+
+        self.assertEqual(expected_normalized1, normalized_line1)
+        self.assertEqual(expected_normalized2, normalized_line2)
+        self.assertEqual(expected_normalized3, normalized_line3)
+        self.assertEqual(expected_normalized4, normalized_line4)
+
 
 if __name__ == '__main__':
     unittest.main()
