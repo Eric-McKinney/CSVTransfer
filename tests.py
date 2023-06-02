@@ -1,3 +1,4 @@
+import sys
 import unittest
 import main
 
@@ -66,6 +67,64 @@ class MyTestCase(unittest.TestCase):
         ]
 
         self.assertEqual(expected_parsed_csv, parsed_csv)
+
+    def test_get_constants_from_file(self):
+        print("Give the name of a csv that exists\n")
+        constants: dict = main.get_constants(True)
+
+        expected_constants: dict = {
+            "source_file": "example.csv",
+            "source_header_row_num": 0,
+            "target_file": "example2.csv",
+            "target_header_row_num": 1,
+            "output_file_name": "output.csv",
+            "target_columns": {"Favorite Color": "fav color"},
+            "match_by": ("Social Security Number", "ssn")
+        }
+
+        self.assertEqual(expected_constants, constants)
+
+    def test_get_constants_from_nonexistent_file(self):
+        print("Give the name of a file that doesn't exist\n")
+
+        with self.assertRaises(SystemExit) as cm:
+            constants: dict = main.get_constants(True)
+
+        self.assertEqual(1, cm.exception.code)
+
+    def test_get_constants_from_stdin(self):  # Give same inputs for the function call and the test inputs
+        print("FUNCTION INPUTS")
+        print("="*80)
+        constants: dict = main.get_constants(False)
+
+        print("="*80)
+        print("BEGIN TEST INPUTS")
+        print("(Give same inputs as you did for the function otherwise the test will fail)")
+        print("\nNote:\tFor some reason I have yet to figure out, the prompts sometimes don't print until after you "
+              "enter something.\n\t\tIf you provide input and the next prompt doesn't print then just look through the "
+              "code for what should have printed.")
+        print("\t\tI've noticed that it usually happens when I scroll up to see what I put for the function inputs in "
+              "PyCharm IDE.")
+        print("="*80)
+        expected_constants: dict = {
+            "source_file": input("Source file name: "),
+            "source_header_row_num": int(input("Source header row number: ")),
+            "target_file": input("Target file name: "),
+            "target_header_row_num": int(input("Target header row number: ")),
+            "output_file_name": input("Output file name: "),
+            "target_columns": {}
+        }
+
+        num_target_col_pairs: int = int(input("How many target columns for each file? "))
+        for i in range(num_target_col_pairs):
+            source_col = input(f"Source target column {i + 1}: ")
+            dest_col = input(f"Destination target column {i + 1}: ")
+            expected_constants["target_columns"][source_col] = dest_col
+
+        expected_constants["match_by"] = (input("Source file column to match by: "),
+                                          input("Target file column to match by: "))
+
+        self.assertEqual(expected_constants, constants)
 
 
 if __name__ == '__main__':
