@@ -16,7 +16,7 @@ class MyTestCase(unittest.TestCase):
              "Employment Status": "Unknown", "Favorite Color": "Green"}
         ]
 
-        self.assertEqual(parsed_csv, expected_parsed_csv)
+        self.assertEqual(expected_parsed_csv, parsed_csv)
 
     def test_parse_csv2(self):
         parsed_csv: list[main.Row] = main.parse_csv("example2.csv", 0)
@@ -27,7 +27,7 @@ class MyTestCase(unittest.TestCase):
             {"name": "", "ssn": "1234321", "fav color": "", "state of residence": ""}
         ]
 
-        self.assertEqual(parsed_csv, expected_parsed_csv)
+        self.assertEqual(expected_parsed_csv, parsed_csv)
 
     def test_normalize_line(self):
         line1: str = "one,two,three"
@@ -49,6 +49,23 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(expected_normalized2, normalized_line2)
         self.assertEqual(expected_normalized3, normalized_line3)
         self.assertEqual(expected_normalized4, normalized_line4)
+
+    def test_parse_csv3(self):
+        parsed_csv: list[main.Row] = main.parse_csv("example3.csv", 1)
+        expected_parsed_csv: list[main.Row] = [
+            {"social security": "", "d.o.b": "", "last name first name": "Bob Joe", "employment status": "employed",
+             "favorite color": "Teal", "hobbies": "Tennis", "comments": ""},
+            {"social security": "1234321", "d.o.b": "", "last name first name": "Wayne Emily", "employment status": "",
+             "favorite color": "Red", "hobbies": "", "comments": "No comment"},
+            {"social security": "234111", "d.o.b": "1/1/1970", "last name first name": "Last First",
+             "employment status": "", "favorite color": "Green", "hobbies": "Deliberate misinformation",
+             "comments": "Mr. Unix Epoch"},
+            {"social security": "", "d.o.b": "", "last name first name": "", "employment status": "", "favorite color": "", "hobbies": "", "comments": ""},
+            {"social security": "565", "d.o.b": "", "last name first name": "", "employment status": "employed",
+             "favorite color": "Royal purple", "hobbies": "No hobby", "comments": ""}
+        ]
+
+        self.assertEqual(expected_parsed_csv, parsed_csv)
 
 
 if __name__ == '__main__':
