@@ -5,6 +5,13 @@ This script will transfer data from one csv to another into a new file. Any numb
 Only one column from each csv can be used to match by, however. This "matching" is necessary because the transfer might
 not just be a copy-paste of a column, rather the data might be in a different order or might not have the same number of
 rows.
+
+
+Usage
+
+First, before running this script make sure that the two csv files you want to operate on are in the same directory as
+this script. Once you've done that, you can run this script. A config file may be provided or input can be taken from
+stdin when prompted. At the moment this script does not take command line arguments.
 """
 import sys
 from time import sleep
