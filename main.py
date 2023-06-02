@@ -148,9 +148,26 @@ def parse_csv(file_name: str, header_line_num: int) -> list[Row]:
 
 
 def normalize_line_with_quotes(line: str) -> str:
+    """
+    Normalizes a line of text by removing the commas and quotes from quoted fields. Does nothing for lines that are
+    already normalized.
+    Ex: one,two,"extra, commas",three --> one,two,extra commas,three
+
+    :param line: A string of text representing a line from a csv file
+    :return: Normalized line
+    """
+
+    if "\"" not in line:
+        return line
+
     separated_by_quoted_item: list[str] = line.split("\"")
 
     quoted_item = separated_by_quoted_item[1]
+    normalized_quoted_item = quoted_item.replace(",", "")
+
+    normalized_line: str = separated_by_quoted_item[0] + normalized_quoted_item + separated_by_quoted_item[2]
+
+    return normalized_line
 
 
 def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str: str],
