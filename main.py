@@ -11,7 +11,7 @@ Usage
 
 First, before running this script make sure that the two csv files you want to operate on are in the same directory as
 this script. Once you've done that, you can run this script. A config file may be provided or input can be taken from
-stdin when prompted.
+stdin when prompted. An example config file can be seen in config_example.txt.
 """
 import sys
 from time import sleep
@@ -21,8 +21,9 @@ Header = str
 Data = str
 Row = dict[Header: Data]
 
-# TODO:
-# - Add a ignored_rows constant
+# TODO: Implement transfer_data
+# TODO: Make a README
+# TODO: add an ignored_rows constants
 
 
 def main():
@@ -204,6 +205,7 @@ def write_csv(file_name: str, data: list[Row]) -> None:
     """
     Formats and writes data to a csv from a list of rows where each row is a dictionary containing keys which are the
     headers and values which are the elements of that row. If there is no file by the given name, one will be created.
+    If a file by the given name already exists, a prompt will ask if it should be overwritten.
 
     :param file_name: Name of file to be written to or created
     :param data: Data to write to the file
