@@ -11,7 +11,7 @@ Usage
 
 First, before running this script make sure that the two csv files you want to operate on are in the same directory as
 this script. Once you've done that, you can run this script. A config file may be provided or input can be taken from
-stdin when prompted. At the moment this script does not take command line arguments.
+stdin when prompted.
 """
 import sys
 from time import sleep
@@ -20,6 +20,9 @@ from time import sleep
 Header = str
 Data = str
 Row = dict[Header: Data]
+
+# TODO:
+# - Add a ignored_rows constant
 
 
 def main():
@@ -207,8 +210,52 @@ def write_csv(file_name: str, data: list[Row]) -> None:
     :return:
     """
 
-    sleep(2)
-    pass
+    lines_to_write: list[str] = []
+
+    header_line: str = row_to_string(data[0], header=True)
+    lines_to_write.append(header_line)
+
+    for row in data:
+        lines_to_write.append(row_to_string(row, header=False))
+
+    try:
+        with open(file_name, "x") as f:
+            f.writelines(lines_to_write)
+    except FileExistsError:
+        print(f"File \"{file_name}\" already exists", file=sys.stderr)
+        overwrite = input("Overwrite it (y/N)? ").lower()
+
+        if overwrite in ["y", "yes"]:
+            with open(file_name, "w") as f:
+                f.writelines(lines_to_write)
+        else:
+            exit(1)
+
+
+def row_to_string(row: Row, header: bool) -> str:
+    """
+    Converts a row (dictionary of headers as keys and elements of row as values) to a string where the elements of that
+    row are separated by commas.
+
+    :param row: Row to convert
+    :param header: Whether the row is a header or not
+    :return: String of elements of the row separated by commas
+    """
+
+    row_str: str = ""
+
+    if header:
+        elements = row.keys()
+    else:
+        elements = row.values()
+
+    for i, element in enumerate(elements):
+        if i == 0:
+            row_str += element
+        else:
+            row_str += f",{element}"
+
+    return row_str
 
 
 if __name__ == "__main__":
