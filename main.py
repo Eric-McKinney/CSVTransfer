@@ -23,7 +23,7 @@ Row = dict[Header: Data]
 
 # TODO: Implement transfer_data
 # TODO: Make a README
-# TODO: add an ignored_rows constants
+# TODO: include ignored rows in output?
 
 
 def main():
