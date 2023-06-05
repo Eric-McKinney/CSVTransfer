@@ -5,7 +5,7 @@ import main
 
 class MyTestCase(unittest.TestCase):
     def test_parse_csv(self):
-        parsed_csv: list[main.Row] = main.parse_csv("example.csv", 0)
+        parsed_csv: list[main.Row] = main.parse_csv("example.csv", 0, [])
         expected_parsed_csv: list[main.Row] = [
             {"Name": "John Smith", "Date of birth": "3/24/1989", "Social Security Number": "123456",
              "Employment Status": "Employed", "Favorite Color": "Red"},
@@ -20,7 +20,7 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(expected_parsed_csv, parsed_csv)
 
     def test_parse_csv2(self):
-        parsed_csv: list[main.Row] = main.parse_csv("example2.csv", 0)
+        parsed_csv: list[main.Row] = main.parse_csv("example2.csv", 0, [])
         expected_parsed_csv: list[main.Row] = [
             {"name": "First Last", "ssn": "234111", "fav color": "", "state of residence": "Ohio"},
             {"name": "", "ssn": "987654321", "fav color": "Orange", "state of residence": "Texas"},
@@ -52,7 +52,7 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(expected_normalized4, normalized_line4)
 
     def test_parse_csv3(self):
-        parsed_csv: list[main.Row] = main.parse_csv("example3.csv", 1)
+        parsed_csv: list[main.Row] = main.parse_csv("example3.csv", 1, [0])
         expected_parsed_csv: list[main.Row] = [
             {"social security": "", "d.o.b": "", "last name first name": "Bob Joe", "employment status": "employed",
              "favorite color": "Teal", "hobbies": "Tennis", "comments": ""},
@@ -69,17 +69,19 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(expected_parsed_csv, parsed_csv)
 
     def test_get_constants_from_file(self):
-        print("Give the name of a csv that exists\n")
+        print("Give the name of a config file that exists\n")
         constants: dict = main.get_constants(True)
 
         expected_constants: dict = {
             "source_file": "example.csv",
             "source_header_row_num": 0,
-            "target_file": "example2.csv",
+            "source_ignored_rows": [],
+            "target_file": "example3.csv",
             "target_header_row_num": 1,
+            "target_ignored_rows": [0],
             "output_file_name": "output.csv",
-            "target_columns": {"Favorite Color": "fav color"},
-            "match_by": ("Social Security Number", "ssn")
+            "target_columns": {"Favorite Color": "favorite color"},
+            "match_by": ("Social Security Number", "social security")
         }
 
         self.assertEqual(expected_constants, constants)
@@ -88,7 +90,7 @@ class MyTestCase(unittest.TestCase):
         print("Give the name of a file that doesn't exist\n")
 
         with self.assertRaises(SystemExit) as cm:
-            constants: dict = main.get_constants(True)
+            main.get_constants(True)
 
         self.assertEqual(1, cm.exception.code)
 
@@ -109,11 +111,33 @@ class MyTestCase(unittest.TestCase):
         expected_constants: dict = {
             "source_file": input("Source file name: "),
             "source_header_row_num": int(input("Source header row number: ")),
+            "source_ignored_rows": input("Ignored rows: ").split(","),
             "target_file": input("Target file name: "),
             "target_header_row_num": int(input("Target header row number: ")),
+            "target_ignored_rows": input("Ignored rows: ").split(","),
             "output_file_name": input("Output file name: "),
             "target_columns": {}
         }
+
+        blanks = 0
+        for i, row in enumerate(expected_constants["source_ignored_rows"]):
+            if row == "":
+                blanks += 1
+                continue
+            expected_constants["source_ignored_rows"][i] = int(row)
+
+        for _ in range(blanks):
+            expected_constants["source_ignored_rows"].remove("")
+
+        blanks = 0
+        for i, row in enumerate(expected_constants["target_ignored_rows"]):
+            if row == "":
+                blanks += 1
+                continue
+            expected_constants["target_ignored_rows"][i] = int(row)
+
+        for _ in range(blanks):
+            expected_constants["target_ignored_rows"].remove("")
 
         num_target_col_pairs: int = int(input("How many target columns for each file? "))
         for i in range(num_target_col_pairs):

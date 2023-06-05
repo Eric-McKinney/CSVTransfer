@@ -27,7 +27,7 @@ Row = dict[Header: Data]
 
 
 def main():
-    read_from_file: bool = input("Read constants from a file (y/[n])? ").lower() in ["y", "yes"]
+    read_from_file: bool = input("Read constants from a file (y/N)? ").lower() in ["y", "yes"]
     constants: dict = get_constants(read_from_file)
     print("Parsing source...", end="", flush=True)
     parsed_source: list[Row] = parse_csv(constants["source_file"], constants["source_header_row_num"])
@@ -48,26 +48,32 @@ def get_constants(from_file: bool) -> dict:
 
     - source_file (string): The name of csv file which the data will be drawn from.
       The file should be in the same directory as this script.
-    - source_header_row_num (int): Row number to use as header (rows before will be ignored). Row numbers start at 0.
+    - source_header_row_num (int): Row number to use as header. Row numbers start at 0.
+    - source_ignored_rows (list[int]): List of row numbers for rows to ignore. Ignored rows are not parsed, not included
+      in the data transfer, and are not included in the output.
     - target_file (string): The name of csv file which the data will be put into. The file should be in the same
       directory as this script.
-    - target_header_row_num (int): Row number to use as header (rows before will be ignored). Row numbers start at 0.
+    - target_header_row_num (int): Row number to use as header. Row numbers start at 0.
+    - target_ignored_rows (list[int]): List of row numbers for rows to ignore. Ignored rows are not parsed, not included
+      in the data transfer, and are not included in the output.
     - output_file_name (string): The name of the resulting csv file (include the file extension).
-    - target_columns (dictionary/map K: string, V: string): Indicates the source & destination column pair(s). The
+    - target_columns (dictionary/map [K: string, V: string]): Indicates the source & destination column pair(s). The
       source column is the key and the destination column is the associated value.
-    - match_by (tuple string, string): The column in each csv file to match the data by (e.g. serial number). The data
+    - match_by (tuple [string, string]): The column in each csv file to match the data by (e.g. serial number). The data
       in these columns should be shared or mostly the same between the two files. The names of the columns don't need to
       match.
 
-    :param from_file: True if the constants should be loaded from a file, false if constants should be given via stdin
+    :param from_file: True if the constants should be loaded from a file, False if constants should be given via stdin
     :return: Dictionary of the constants where the keys are the name of the constants
     """
 
     constants: dict = {
         "source_file": "",
         "source_header_row_num": 0,
+        "source_ignored_rows": [],
         "target_file": "",
         "target_header_row_num": 0,
+        "target_ignored_rows": [],
         "output_file_name": "",
         "target_columns": {},  # source col: destination col
         "match_by": ("", "")  # col in source, col in target
@@ -80,8 +86,10 @@ def get_constants(from_file: bool) -> dict:
                 # Each line is split at the " = " and the latter half is used (without the newline)
                 constants["source_file"] = f.readline().split(" = ")[-1].rstrip()
                 constants["source_header_row_num"] = int(f.readline().split(" = ")[-1].rstrip())
+                source_ignored_rows_strs: list[str] = f.readline().split(" = ")[-1].rstrip().split(",")
                 constants["target_file"] = f.readline().split(" = ")[-1].rstrip()
                 constants["target_header_row_num"] = int(f.readline().split(" = ")[-1].rstrip())
+                target_ignored_rows_strs: list[str] = f.readline().split(" = ")[-1].rstrip().split(",")
                 constants["output_file_name"] = f.readline().split(" = ")[-1].rstrip()
                 target_columns_str: str = f.readline().split(" = ")[-1].rstrip()
                 match_by_str: str = f.readline().split(" = ")[-1].rstrip()
@@ -91,14 +99,27 @@ def get_constants(from_file: bool) -> dict:
     else:
         constants["source_file"] = input("What is the name of the source file? ")
         constants["source_header_row_num"] = int(input("What row contains the headers (first row is 0)? "))
+        source_ignored_rows_strs: list[str] = input("Give a comma separated list of row numbers to ignore: ").split(",")
         constants["target_file"] = input("What is the name of the target file? ")
         constants["target_header_row_num"] = int(input("What row contains the headers (first row is 0)? "))
+        target_ignored_rows_strs: list[str] = input("Give a comma separated list of row numbers to ignore: ").split(",")
         constants["output_file_name"] = input("Give a name for the output file: ")
         target_columns_str: str = input("Give a comma separated list of the columns of data to be moved in pairs of "
                                         "sources and destinations (in that order).\nEx: source1,dest1,source2,dest2"
                                         "\nEnter here: ")
         match_by_str: str = input("Give the names of the columns which the data being transferred should be matched by "
                                   "in the order of source then target.\nEx: serialnum,serial number\nEnter here: ")
+
+    # Casting ignored row numbers from strings to ints
+    for row in source_ignored_rows_strs:
+        if row == "":  # happens when no numbers are given
+            continue
+        constants["source_ignored_rows"].append(int(row))
+
+    for row in target_ignored_rows_strs:
+        if row == "":
+            continue
+        constants["target_ignored_rows"].append(int(row))
 
     # Converting from a comma separated list to a dictionary
     target_columns = {}
@@ -115,14 +136,15 @@ def get_constants(from_file: bool) -> dict:
     return constants
 
 
-def parse_csv(file_name: str, header_line_num: int) -> list[Row]:
+def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]) -> list[Row]:
     """
     Parses a csv file into a list of its rows. Each row is put into a dictionary where the keys are the headers for a
-    column and the values are the elements of that row. Rows before the header row are ignored. The header row is not an
-    element of the list, but is represented in every element of the list by the key values.
+    column and the values are the elements of that row. Rows listed in ignored_rows are not parsed. The header row is
+    not an element of the list, but is represented in every element of the list by the key values.
 
     :param file_name: name of file to parse
     :param header_line_num: line number of the headers (starts at 0)
+    :param ignored_rows: List of row numbers to ignore
     :return: List of the rows of the csv
     """
 
@@ -138,13 +160,13 @@ def parse_csv(file_name: str, header_line_num: int) -> list[Row]:
     for i, line in enumerate(lines):
         lines[i] = line.rstrip()
 
-        if i >= header_line_num and "\"" in line:
+        if i not in ignored_rows and "\"" in line:
             lines_with_quotes.append(i)
 
     headers: list[str] = []
     rows: list[Row] = []
     for i, line in enumerate(lines):
-        if i < header_line_num:
+        if i in ignored_rows:
             continue
 
         if i in lines_with_quotes:
