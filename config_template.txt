@@ -1,9 +1,9 @@
 source_file = 
 source_header_row_num =
-source_ignored_rows =
+source_ignored_rows = 
 target-file = 
 target_header_row_num =
-target_ignored_rows =
+target_ignored_rows = 
 output_file_name = 
 target_columns = 
 match_by = 

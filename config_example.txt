@@ -1,6 +1,6 @@
 source_file = example.csv
 source_header_row_num = 0
-source_ignored_rows =
+source_ignored_rows = 
 target_file = example3.csv
 target_header_row_num = 1
 target_ignored_rows = 0
