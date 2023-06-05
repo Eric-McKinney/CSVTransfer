@@ -218,6 +218,8 @@ def write_csv(file_name: str, data: list[Row]) -> None:
     for row in data:
         lines_to_write.append(row_to_string(row, header=False))
 
+    lines_to_write[-1] = lines_to_write[-1].rstrip()  # all lines get a newline at the end, but the last shouldn't
+
     try:
         with open(file_name, "x") as f:
             f.writelines(lines_to_write)
@@ -235,7 +237,7 @@ def write_csv(file_name: str, data: list[Row]) -> None:
 def row_to_string(row: Row, header: bool) -> str:
     """
     Converts a row (dictionary of headers as keys and elements of row as values) to a string where the elements of that
-    row are separated by commas.
+    row are separated by commas. Also adds a newline to the end.
 
     :param row: Row to convert
     :param header: Whether the row is a header or not
@@ -255,6 +257,7 @@ def row_to_string(row: Row, header: bool) -> str:
         else:
             row_str += f",{element}"
 
+    row_str += "\n"
     return row_str
 
 

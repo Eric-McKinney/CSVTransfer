@@ -126,6 +126,26 @@ class MyTestCase(unittest.TestCase):
 
         self.assertEqual(expected_constants, constants)
 
+    def test_write_to_csv(self):
+        sample_data: list[main.Row] = [
+            {"Name": "John Deer", "Occupation": "Landscaping"},
+            {"Name": "Test", "Occupation": "None"},
+            {"Name": "Batman", "Occupation": "Hero"}
+        ]
+        main.write_csv("test_output.csv", sample_data)
+
+        with open("test_output.csv") as f:
+            lines = f.readlines()
+
+        expected_lines = [
+            "Name,Occupation\n",
+            "John Deer,Landscaping\n",
+            "Test,None\n",
+            "Batman,Hero"
+        ]
+
+        self.assertEqual(expected_lines, lines)
+
 
 if __name__ == '__main__':
     unittest.main()
