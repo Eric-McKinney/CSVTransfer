@@ -68,6 +68,20 @@ class MyTestCase(unittest.TestCase):
 
         self.assertEqual(expected_parsed_csv, parsed_csv)
 
+    def test_parse_csv4(self):
+        parsed_csv: list[main.Row] = main.parse_csv("example3.csv", 1, [0, 2, 5])
+        expected_parsed_csv: list[main.Row] = [
+            {"social security": "1234321", "d.o.b": "", "last name first name": "Wayne Emily", "employment status": "",
+             "favorite color": "Red", "hobbies": "", "comments": "No comment"},
+            {"social security": "234111", "d.o.b": "1/1/1970", "last name first name": "Last First",
+             "employment status": "", "favorite color": "Green", "hobbies": "Deliberate misinformation",
+             "comments": "Mr. Unix Epoch"},
+            {"social security": "565", "d.o.b": "", "last name first name": "", "employment status": "employed",
+             "favorite color": "Royal purple", "hobbies": "No hobby", "comments": ""}
+        ]
+
+        self.assertEqual(expected_parsed_csv, parsed_csv)
+
     def test_get_constants_from_file(self):
         print("Give the name of a config file that exists\n")
         constants: dict = main.get_constants(True)
@@ -119,13 +133,14 @@ class MyTestCase(unittest.TestCase):
             "target_columns": {}
         }
 
+        # I wanted the prompts to go in order, but as a result when numbers aren't given empty strings sneak in
+        # The rest is just casting to ints from strings
         blanks = 0
         for i, row in enumerate(expected_constants["source_ignored_rows"]):
             if row == "":
                 blanks += 1
                 continue
             expected_constants["source_ignored_rows"][i] = int(row)
-
         for _ in range(blanks):
             expected_constants["source_ignored_rows"].remove("")
 
@@ -135,7 +150,6 @@ class MyTestCase(unittest.TestCase):
                 blanks += 1
                 continue
             expected_constants["target_ignored_rows"][i] = int(row)
-
         for _ in range(blanks):
             expected_constants["target_ignored_rows"].remove("")
 
