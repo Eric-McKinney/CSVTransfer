@@ -23,16 +23,17 @@ Row = dict[Header: Data]
 
 # TODO: Implement transfer_data
 # TODO: Make a README
-# TODO: include ignored rows in output?
 
 
 def main():
     read_from_file: bool = input("Read constants from a file (y/N)? ").lower() in ["y", "yes"]
     constants: dict = get_constants(read_from_file)
     print("Parsing source...", end="", flush=True)
-    parsed_source: list[Row] = parse_csv(constants["source_file"], constants["source_header_row_num"])
+    parsed_source: list[Row] = parse_csv(constants["source_file"], constants["source_header_row_num"],
+                                         constants["source_ignored_rows"])
     print("DONE\nParsing target...", end="", flush=True)
-    parsed_target: list[Row] = parse_csv(constants["target_file"], constants["target_header_row_num"])
+    parsed_target: list[Row] = parse_csv(constants["target_file"], constants["target_header_row_num"],
+                                         constants["target_ignored_rows"])
     print("DONE")
 
     print("Transferring data...", end="", flush=True)
