@@ -246,6 +246,44 @@ class MyTestCase(unittest.TestCase):
 
         self.assertEqual(expected_target, target)
 
+    def test_everything_together(self):
+        print("="*80)
+        print("Use config_example.txt for this test")
+        print("="*80)
+        constants: dict = main.get_constants(True)
+        parsed_source: list[main.Row] = main.parse_csv(constants["source_file"], constants["source_header_row_num"],
+                                                       constants["source_ignored_rows"])
+        parsed_target: list[main.Row] = main.parse_csv(constants["target_file"], constants["target_header_row_num"],
+                                                       constants["target_ignored_rows"])
+        main.transfer_data(parsed_source, parsed_target, constants["target_columns"], constants["match_by"])
+        main.write_csv(constants["output_file_name"], parsed_target)
+
+        with open(constants["output_file_name"]) as f:
+            lines = f.readlines()
+
+        expected_constants = {
+            "source_file": "example.csv",
+            "source_header_row_num": 0,
+            "source_ignored_rows": [],
+            "target_file": "example3.csv",
+            "target_header_row_num": 1,
+            "target_ignored_rows": [0, 5],
+            "output_file_name": "output.csv",
+            "target_columns": {"Favorite Color": "favorite color"},
+            "match_by": ("Social Security Number", "social security")
+        }
+
+        expected_lines = [
+            "social security,d.o.b,last name first name,employment status,favorite color,hobbies,comments\n",
+            ",,Bob Joe,employed,Teal,Tennis,\n",
+            "1234321,,Wayne Emily,,Yellow,,No comment\n",
+            "234111,1/1/1970,Last First,,Green,Deliberate misinformation,Mr. Unix Epoch\n",
+            "565,,,employed,Royal purple,No hobby,"
+        ]
+
+        self.assertEqual(expected_constants, constants)
+        self.assertEqual(expected_lines, lines)
+
 
 if __name__ == '__main__':
     unittest.main()
