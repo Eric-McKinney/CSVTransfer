@@ -14,7 +14,6 @@ this script. Once you've done that, you can run this script. A config file may b
 stdin when prompted. An example config file can be seen in config_example.txt.
 """
 import sys
-from time import sleep
 
 # Custom types for clarity
 Header = str
@@ -220,8 +219,20 @@ def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str
     :return:
     """
 
-    sleep(2)
-    pass
+    for row in source:
+        data_to_match_by: str = row[match_by[0]]
+        data_to_transfer: dict[str: str] = {}
+
+        for header in target_columns.keys():
+            data_to_transfer[header] = row[header]
+
+        for t_row in target:
+            if t_row[match_by[1]] == data_to_match_by:
+                for header in target_columns.keys():
+                    t_header = target_columns[header]
+                    t_row[t_header] = data_to_transfer[header]
+
+                break
 
 
 def write_csv(file_name: str, data: list[Row]) -> None:
