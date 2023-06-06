@@ -20,13 +20,15 @@ Header = str
 Data = str
 Row = dict[Header: Data]
 
-# TODO: Implement transfer_data
+# TODO: Fix parsing of quoted fields with newlines in them
+# TODO: Fix parsing of quoted fields that have more than one quoted section (,"blah blah""blah",)
 # TODO: Make a README
 
 
 def main():
     read_from_file: bool = input("Read constants from a file (y/N)? ").lower() in ["y", "yes"]
     constants: dict = get_constants(read_from_file)
+    print("="*80)
     print("Parsing source...", end="", flush=True)
     parsed_source: list[Row] = parse_csv(constants["source_file"], constants["source_header_row_num"],
                                          constants["source_ignored_rows"])
