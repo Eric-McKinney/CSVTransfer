@@ -13,6 +13,7 @@ First, before running this script make sure that the two csv files you want to o
 this script. Once you've done that, you can run this script. A config file may be provided or input can be taken from
 stdin when prompted. An example config file can be seen in config_example.txt.
 """
+import csv
 import sys
 
 # Custom types for clarity
@@ -138,7 +139,7 @@ def get_constants(from_file: bool) -> dict:
     return constants
 
 
-def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]) -> list[Row]:
+def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
     """
     Parses a csv file into a list of its rows. Each row is put into a dictionary where the keys are the headers for a
     column and the values are the elements of that row. Rows listed in ignored_rows are not parsed. The header row is
@@ -151,58 +152,30 @@ def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]) -> 
     """
 
     try:
-        with open(file_name) as csvfile:
-            lines = csvfile.readlines()
+        with open(file_name, newline='') as csvfile:
+            dialect = csv.Sniffer().sniff(csvfile.readline())
+            csvfile.seek(0)
+
+            header_reader = csv.reader(csvfile, dialect=dialect)
+            for _ in range(header_line_num):
+                header_reader.__next__()
+
+            headers: list[str] = header_reader.__next__()
+            csvfile.seek(0)
+
+            reader = csv.DictReader(csvfile, fieldnames=headers, dialect=dialect)
+
+            rows: list[Row] = []
+            for i, row in enumerate(reader):
+                if i in ignored_rows or i == header_line_num:
+                    continue
+
+                rows.append(row)
     except FileNotFoundError:
         print(f"Could not find {file_name}", file=sys.stderr)
         exit(1)
 
-    # removing newlines and checking for quotes
-    lines_with_quotes: list[int] = []
-    for i, line in enumerate(lines):
-        lines[i] = line.rstrip()
-
-        if i not in ignored_rows and "\"" in line:
-            lines_with_quotes.append(i)
-
-    headers: list[str] = []
-    rows: list[Row] = []
-    for i, line in enumerate(lines):
-        if i in ignored_rows:
-            continue
-
-        if i in lines_with_quotes:
-            line = normalize_line_with_quotes(line)
-
-        if i == header_line_num:
-            headers = line.split(",")
-        else:
-            rows.append({k: v for (k, v) in zip(headers, line.split(","))})
-
     return rows
-
-
-def normalize_line_with_quotes(line: str) -> str:
-    """
-    Normalizes a line of text by removing the commas and quotes from quoted fields. Does nothing for lines that are
-    already normalized.
-    Ex: one,two,"extra, commas",three --> one,two,extra commas,three
-
-    :param line: A string of text representing a line from a csv file
-    :return: Normalized line
-    """
-
-    if "\"" not in line:
-        return line
-
-    separated_by_quoted_item: list[str] = line.split("\"")
-
-    quoted_item = separated_by_quoted_item[1]
-    normalized_quoted_item = quoted_item.replace(",", "")
-
-    normalized_line: str = separated_by_quoted_item[0] + normalized_quoted_item + separated_by_quoted_item[2]
-
-    return normalized_line
 
 
 def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str: str],
