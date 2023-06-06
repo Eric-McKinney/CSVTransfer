@@ -1,4 +1,3 @@
-import sys
 import unittest
 import main
 
@@ -61,7 +60,8 @@ class MyTestCase(unittest.TestCase):
             {"social security": "234111", "d.o.b": "1/1/1970", "last name first name": "Last First",
              "employment status": "", "favorite color": "Green", "hobbies": "Deliberate misinformation",
              "comments": "Mr. Unix Epoch"},
-            {"social security": "", "d.o.b": "", "last name first name": "", "employment status": "", "favorite color": "", "hobbies": "", "comments": ""},
+            {"social security": "", "d.o.b": "", "last name first name": "", "employment status": "",
+             "favorite color": "", "hobbies": "", "comments": ""},
             {"social security": "565", "d.o.b": "", "last name first name": "", "employment status": "employed",
              "favorite color": "Royal purple", "hobbies": "No hobby", "comments": ""}
         ]
@@ -183,6 +183,68 @@ class MyTestCase(unittest.TestCase):
         ]
 
         self.assertEqual(expected_lines, lines)
+
+    def test_transfer_data(self):
+        source: list[main.Row] = [
+            {"x": "1", "x^2": "1", "x^3": "1"},
+            {"x": "2", "x^2": "4", "x^3": "8"},
+            {"x": "3", "x^2": "9", "x^3": "27"},
+            {"x": "4", "x^2": "16", "x^3": "64"},
+            {"x": "5", "x^2": "25", "x^3": "125"}
+        ]
+        target: list[main.Row] = [
+            {"t": "1", "func1": "2", "func2": "4"},
+            {"t": "2", "func1": "4", "func2": ""},
+            {"t": "3", "func1": "6", "func2": "88"},
+            {"t": "4", "func1": "8", "func2": ""},
+            {"t": "5", "func1": "10", "func2": "3"},
+            {"t": "6", "func1": "13", "func2": ""},
+            {"t": "7", "func1": "19", "func2": "2"}
+        ]
+        target_columns: dict[str: str] = {"x^2": "func2"}
+        match_by: tuple[str, str] = ("x", "t")
+
+        main.transfer_data(source, target, target_columns, match_by)
+
+        expected_target = [
+            {"t": "1", "func1": "2", "func2": "1"},
+            {"t": "2", "func1": "4", "func2": "4"},
+            {"t": "3", "func1": "6", "func2": "9"},
+            {"t": "4", "func1": "8", "func2": "16"},
+            {"t": "5", "func1": "10", "func2": "25"},
+            {"t": "6", "func1": "13", "func2": ""},
+            {"t": "7", "func1": "19", "func2": "2"}
+        ]
+
+        self.assertEqual(expected_target, target)
+
+    def test_transfer_data2(self):
+        source: list[main.Row] = [
+            {"Song": "Power Slam", "Rating": "8/10"},
+            {"Song": "Mirror of the World", "Rating": "9/10"},
+            {"Song": "Freesia", "Rating": "10/10"},
+            {"Song": "Nobody", "Rating": "10/10"},
+            {"Song": "HEAVY DAY", "Rating": "11/10"}
+        ]
+        target: list[main.Row] = [
+            {"song": "Alone Infection", "rating": "9/10"},
+            {"song": "Requiem", "rating": "10/10"},
+            {"song": "HEAVY DAY", "rating": "9/10"},
+            {"song": "505", "rating": "10/10"}
+        ]
+        target_columns: dict[str: str] = {"Rating": "rating"}
+        match_by: tuple[str, str] = ("Song", "song")
+
+        main.transfer_data(source, target, target_columns, match_by)
+
+        expected_target = [
+            {"song": "Alone Infection", "rating": "9/10"},
+            {"song": "Requiem", "rating": "10/10"},
+            {"song": "HEAVY DAY", "rating": "11/10"},
+            {"song": "505", "rating": "10/10"}
+        ]
+
+        self.assertEqual(expected_target, target)
 
 
 if __name__ == '__main__':
