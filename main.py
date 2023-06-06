@@ -20,8 +20,8 @@ Header = str
 Data = str
 Row = dict[Header: Data]
 
-# TODO: Fix parsing of quoted fields with newlines in them
-# TODO: Fix parsing of quoted fields that have more than one quoted section (,"blah blah""blah",)
+# TODO: Switch to standard csv library
+# TODO: Switch to standard configparser library
 # TODO: Make a README
 
 
