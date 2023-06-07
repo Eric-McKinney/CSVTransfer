@@ -34,8 +34,8 @@ class MyTestCase(unittest.TestCase):
         expected_parsed_csv: list[main.Row] = [
             {"social security": "", "d.o.b": "", "last name, first name": "Bob, Joe", "employment status": "employed",
              "favorite color": "Teal", "hobbies": "Tennis", "comments": ""},
-            {"social security": "1234321", "d.o.b": "", "last name, first name": "Wayne, Emily", "employment status": "",
-             "favorite color": "Red", "hobbies": "", "comments": "No comment"},
+            {"social security": "1234321", "d.o.b": "", "last name, first name": "Wayne, Emily",
+             "employment status": "", "favorite color": "Red", "hobbies": "", "comments": "No comment"},
             {"social security": "234111", "d.o.b": "1/1/1970", "last name, first name": "Last, First",
              "employment status": "", "favorite color": "Green", "hobbies": "Deliberate misinformation",
              "comments": "Mr. Unix Epoch"},
@@ -149,7 +149,7 @@ class MyTestCase(unittest.TestCase):
             {"Name": "Test", "Occupation": "None"},
             {"Name": "Batman", "Occupation": "Hero"}
         ]
-        main.write_csv("test_output.csv", sample_data)
+        main.write_csv("test_output.csv", sample_data, dialect="excel")
 
         with open("test_output.csv") as f:
             lines = f.readlines()
@@ -158,7 +158,7 @@ class MyTestCase(unittest.TestCase):
             "Name,Occupation\n",
             "John Deer,Landscaping\n",
             "Test,None\n",
-            "Batman,Hero"
+            "Batman,Hero\n"
         ]
 
         self.assertEqual(expected_lines, lines)
@@ -235,7 +235,7 @@ class MyTestCase(unittest.TestCase):
         parsed_target: list[main.Row] = main.parse_csv(constants["target_file"], constants["target_header_row_num"],
                                                        constants["target_ignored_rows"])
         main.transfer_data(parsed_source, parsed_target, constants["target_columns"], constants["match_by"])
-        main.write_csv(constants["output_file_name"], parsed_target)
+        main.write_csv(constants["output_file_name"], parsed_target, constants["write_dialect"])
 
         with open(constants["output_file_name"]) as f:
             lines = f.readlines()
