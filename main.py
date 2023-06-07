@@ -13,6 +13,7 @@ First, before running this script make sure that the two csv files you want to o
 this script. Once you've done that, you can run this script. A config file may be provided or input can be taken from
 stdin when prompted. An example config file can be seen in config_example.txt.
 """
+import configparser
 import csv
 import sys
 
@@ -23,10 +24,15 @@ Row = dict[Header: Data]
 
 # TODO: Switch to standard configparser library
 # TODO: Add dialect to constants (for writing)
+# TODO: Add command line argument for config file
+# TODO: Update documentation
 # TODO: Make a README
 
 
-def main():
+def main(args: list[str] = None):
+    if args is None:
+        args = sys.argv[1:]
+
     read_from_file: bool = input("Read constants from a file (y/N)? ").lower() in ["y", "yes"]
     constants: dict = get_constants(read_from_file)
     print("="*80)
@@ -84,6 +90,9 @@ def get_constants(from_file: bool) -> dict:
 
     if from_file:
         constants_file_name: str = input("Please type the name of the file: ")
+
+        config = configparser.ConfigParser(allow_no_value=True)
+        config.read(constants_file_name)
         try:
             with open(constants_file_name) as f:
                 # Each line is split at the " = " and the latter half is used (without the newline)
