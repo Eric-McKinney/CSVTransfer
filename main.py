@@ -51,24 +51,30 @@ def main(args: list[str] = None):
     if not valid_args(args):
         raise SystemExit("See README for proper usage or use --help")
 
-    constants: dict = get_config_constants()
+    config: dict = get_config_constants()
     print("="*80)
     print("Parsing source...", end="", flush=True)
-    parsed_source: list[Row] = parse_csv(constants["source_file"], constants["source_header_row_num"],
-                                         constants["source_ignored_rows"])
+    parsed_source: list[Row] = parse_csv(args[0], config["source"]["header_row_num"],
+                                         config["source"]["ignored_rows"])
     print("DONE\nParsing target...", end="", flush=True)
-    parsed_target: list[Row] = parse_csv(constants["target_file"], constants["target_header_row_num"],
-                                         constants["target_ignored_rows"])
+    parsed_target: list[Row] = parse_csv(args[1], config["target"]["header_row_num"],
+                                         config["target"]["ignored_rows"])
     print("DONE")
 
     print("Transferring data...", end="", flush=True)
-    transfer_data(parsed_source, parsed_target, constants["target_columns"], constants["match_by"])
+    transfer_data(parsed_source, parsed_target, config["target_columns"], config["match_by"])
     print("DONE\nWriting results to output file...", end="", flush=True)
-    write_csv(constants["output_file_name"], parsed_target, constants["writing_dialect"])
-    print(f"DONE\n\nResults can be found in {constants['output_file_name']}")
+    write_csv(config["output_file_name"], parsed_target, config["writing_dialect"])
+    print(f"DONE\n\nResults can be found in {config['output_file_name']}")
 
 
 def valid_args(args: list[str]) -> bool:
+    """
+    Determines if arguments are valid. Arguments should be two file names or relative paths of files
+
+    :param args: List of command line arguments
+    :return: True if valid, false if not valid
+    """
     for arg in args:
         # If the args aren't files in the current directory then we can't proceed.
         path: str = os.path.join(os.getcwd(), arg)
@@ -90,7 +96,8 @@ def valid_args(args: list[str]) -> bool:
 
 def get_config_constants() -> configparser.ConfigParser:
     """
-    Assigns config constants from the file .csv_transfer.ini which is described in the README.
+    Assigns config constants from the file .csv_transfer.ini which is described in the README. Does extra parsing on
+    variables which need to be put into a data structure.
 
     :return: Dictionary of the constants where the keys are the name of the constants
     """
@@ -98,12 +105,17 @@ def get_config_constants() -> configparser.ConfigParser:
     config = configparser.ConfigParser(allow_no_value=True)
     config.read(".csv_transfer.ini")
 
+    # Collect missing variables via stdin
     for section in ["source", "target"]:
         for key in ["target_column", "match_by"]:
             if config[section][key] is None:
                 config[section][key] = input(f"{key} missing for {section}. Input manually: ")
 
     return config
+
+
+def parse_unprocessed_fields(config: configparser.ConfigParser) -> None:
+    pass
 
 
 def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
