@@ -23,6 +23,7 @@ Row = dict[Header: Data]
 
 # TODO: Switch to standard csv library
 # TODO: Switch to standard configparser library
+# TODO: Add dialect to constants (for writing)
 # TODO: Make a README
 
 
@@ -41,7 +42,7 @@ def main():
     print("Transferring data...", end="", flush=True)
     transfer_data(parsed_source, parsed_target, constants["target_columns"], constants["match_by"])
     print("DONE\nWriting results to output file...", end="", flush=True)
-    write_csv(constants["output_file_name"], parsed_target)
+    write_csv(constants["output_file_name"], parsed_target, constants["writing_dialect"])
     print(f"DONE\n\nResults can be found in {constants['output_file_name']}")
 
 
@@ -210,66 +211,52 @@ def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str
                 break
 
 
-def write_csv(file_name: str, data: list[Row]) -> None:
+def write_csv(file_name: str, data: list[Row], dialect: str) -> None:
     """
-    Formats and writes data to a csv from a list of rows where each row is a dictionary containing keys which are the
-    headers and values which are the elements of that row. If there is no file by the given name, one will be created.
-    If a file by the given name already exists, a prompt will ask if it should be overwritten.
+    Writes data to a csv from a list of rows where each row is a dictionary containing keys which are the
+    headers and values which are the elements of that row using the given dialect. If there is no file by the given
+    name, one will be created. If a file by the given name already exists, a prompt will ask if it should be
+    overwritten.
 
     :param file_name: Name of file to be written to or created
     :param data: Data to write to the file
+    :param dialect: csv dialect to use for writing
     :return:
     """
 
-    lines_to_write: list[str] = []
-
-    header_line: str = row_to_string(data[0], header=True)
-    lines_to_write.append(header_line)
-
-    for row in data:
-        lines_to_write.append(row_to_string(row, header=False))
-
-    lines_to_write[-1] = lines_to_write[-1].rstrip()  # all lines get a newline at the end, but the last shouldn't
+    headers: list[str] = data[0].keys()
 
     try:
-        with open(file_name, "x") as f:
-            f.writelines(lines_to_write)
+        write_data(file_name, headers, data, dialect)
     except FileExistsError:
         print(f"File \"{file_name}\" already exists", file=sys.stderr)
         overwrite = input("Overwrite it (y/N)? ").lower()
 
         if overwrite in ["y", "yes"]:
-            with open(file_name, "w") as f:
-                f.writelines(lines_to_write)
+            write_data(file_name, headers, data, dialect, new_file=False)
         else:
             exit(1)
 
 
-def row_to_string(row: Row, header: bool) -> str:
+def write_data(file_name: str, headers: list[str], data: list[Row], dialect: str, new_file: bool = True) -> None:
     """
-    Converts a row (dictionary of headers as keys and elements of row as values) to a string where the elements of that
-    row are separated by commas. Also adds a newline to the end.
+    Writes data to a file by the given name. Will create a file if one by the given name does not exist. If a file by
+    the given name exists and the intent is to have it overwritten, new_file should be false.
 
-    :param row: Row to convert
-    :param header: Whether the row is a header or not
-    :return: String of elements of the row separated by commas
+    :param file_name: Name of file to be written to or created.
+    :param headers: List of the headers for csv file.
+    :param data: Data to write to the file.
+    :param dialect: csv dialect to use for writing
+    :param new_file: If true, tries to create a new file and will not overwrite files by the name file_name. If false,
+    the behavior is the same, but it will overwrite files by the name file_name without warning.
+    :raises FileExistsError: If new_file is true and there is already a file by the name file_name.
+    :return:
     """
 
-    row_str: str = ""
-
-    if header:
-        elements = row.keys()
-    else:
-        elements = row.values()
-
-    for i, element in enumerate(elements):
-        if i == 0:
-            row_str += element
-        else:
-            row_str += f",{element}"
-
-    row_str += "\n"
-    return row_str
+    with open(file_name, "x" if new_file else "w", newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=headers, dialect=dialect)
+        writer.writeheader()
+        writer.writerows(data)
 
 
 if __name__ == "__main__":
