@@ -29,40 +29,19 @@ class MyTestCase(unittest.TestCase):
 
         self.assertEqual(expected_parsed_csv, parsed_csv)
 
-    def test_normalize_line(self):
-        line1: str = "one,two,three"
-        line2: str = "one,\"two, three\""
-        line3: str = "\"one, two\",three"
-        line4: str = "one,\"two, three\",four"
-
-        normalized_line1: str = main.normalize_line_with_quotes(line1)
-        normalized_line2: str = main.normalize_line_with_quotes(line2)
-        normalized_line3: str = main.normalize_line_with_quotes(line3)
-        normalized_line4: str = main.normalize_line_with_quotes(line4)
-
-        expected_normalized1: str = "one,two,three"
-        expected_normalized2: str = "one,two three"
-        expected_normalized3: str = "one two,three"
-        expected_normalized4: str = "one,two three,four"
-
-        self.assertEqual(expected_normalized1, normalized_line1)
-        self.assertEqual(expected_normalized2, normalized_line2)
-        self.assertEqual(expected_normalized3, normalized_line3)
-        self.assertEqual(expected_normalized4, normalized_line4)
-
     def test_parse_csv3(self):
         parsed_csv: list[main.Row] = main.parse_csv("example3.csv", 1, [0])
         expected_parsed_csv: list[main.Row] = [
-            {"social security": "", "d.o.b": "", "last name first name": "Bob Joe", "employment status": "employed",
+            {"social security": "", "d.o.b": "", "last name, first name": "Bob, Joe", "employment status": "employed",
              "favorite color": "Teal", "hobbies": "Tennis", "comments": ""},
-            {"social security": "1234321", "d.o.b": "", "last name first name": "Wayne Emily", "employment status": "",
-             "favorite color": "Red", "hobbies": "", "comments": "No comment"},
-            {"social security": "234111", "d.o.b": "1/1/1970", "last name first name": "Last First",
+            {"social security": "1234321", "d.o.b": "", "last name, first name": "Wayne, Emily",
+             "employment status": "", "favorite color": "Red", "hobbies": "", "comments": "No comment"},
+            {"social security": "234111", "d.o.b": "1/1/1970", "last name, first name": "Last, First",
              "employment status": "", "favorite color": "Green", "hobbies": "Deliberate misinformation",
              "comments": "Mr. Unix Epoch"},
-            {"social security": "", "d.o.b": "", "last name first name": "", "employment status": "",
+            {"social security": "", "d.o.b": "", "last name, first name": "", "employment status": "",
              "favorite color": "", "hobbies": "", "comments": ""},
-            {"social security": "565", "d.o.b": "", "last name first name": "", "employment status": "employed",
+            {"social security": "565", "d.o.b": "", "last name, first name": "", "employment status": "employed",
              "favorite color": "Royal purple", "hobbies": "No hobby", "comments": ""}
         ]
 
@@ -71,12 +50,12 @@ class MyTestCase(unittest.TestCase):
     def test_parse_csv4(self):
         parsed_csv: list[main.Row] = main.parse_csv("example3.csv", 1, [0, 2, 5])
         expected_parsed_csv: list[main.Row] = [
-            {"social security": "1234321", "d.o.b": "", "last name first name": "Wayne Emily", "employment status": "",
-             "favorite color": "Red", "hobbies": "", "comments": "No comment"},
-            {"social security": "234111", "d.o.b": "1/1/1970", "last name first name": "Last First",
+            {"social security": "1234321", "d.o.b": "", "last name, first name": "Wayne, Emily",
+             "employment status": "", "favorite color": "Red", "hobbies": "", "comments": "No comment"},
+            {"social security": "234111", "d.o.b": "1/1/1970", "last name, first name": "Last, First",
              "employment status": "", "favorite color": "Green", "hobbies": "Deliberate misinformation",
              "comments": "Mr. Unix Epoch"},
-            {"social security": "565", "d.o.b": "", "last name first name": "", "employment status": "employed",
+            {"social security": "565", "d.o.b": "", "last name, first name": "", "employment status": "employed",
              "favorite color": "Royal purple", "hobbies": "No hobby", "comments": ""}
         ]
 
@@ -170,7 +149,7 @@ class MyTestCase(unittest.TestCase):
             {"Name": "Test", "Occupation": "None"},
             {"Name": "Batman", "Occupation": "Hero"}
         ]
-        main.write_csv("test_output.csv", sample_data)
+        main.write_csv("test_output.csv", sample_data, dialect="excel")
 
         with open("test_output.csv") as f:
             lines = f.readlines()
@@ -179,7 +158,7 @@ class MyTestCase(unittest.TestCase):
             "Name,Occupation\n",
             "John Deer,Landscaping\n",
             "Test,None\n",
-            "Batman,Hero"
+            "Batman,Hero\n"
         ]
 
         self.assertEqual(expected_lines, lines)
@@ -256,7 +235,7 @@ class MyTestCase(unittest.TestCase):
         parsed_target: list[main.Row] = main.parse_csv(constants["target_file"], constants["target_header_row_num"],
                                                        constants["target_ignored_rows"])
         main.transfer_data(parsed_source, parsed_target, constants["target_columns"], constants["match_by"])
-        main.write_csv(constants["output_file_name"], parsed_target)
+        main.write_csv(constants["output_file_name"], parsed_target, constants["write_dialect"])
 
         with open(constants["output_file_name"]) as f:
             lines = f.readlines()

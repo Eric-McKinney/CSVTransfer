@@ -13,6 +13,7 @@ First, before running this script make sure that the two csv files you want to o
 this script. Once you've done that, you can run this script. A config file may be provided or input can be taken from
 stdin when prompted. An example config file can be seen in config_example.txt.
 """
+import csv
 import sys
 
 # Custom types for clarity
@@ -20,8 +21,8 @@ Header = str
 Data = str
 Row = dict[Header: Data]
 
-# TODO: Switch to standard csv library
 # TODO: Switch to standard configparser library
+# TODO: Add dialect to constants (for writing)
 # TODO: Make a README
 
 
@@ -40,7 +41,7 @@ def main():
     print("Transferring data...", end="", flush=True)
     transfer_data(parsed_source, parsed_target, constants["target_columns"], constants["match_by"])
     print("DONE\nWriting results to output file...", end="", flush=True)
-    write_csv(constants["output_file_name"], parsed_target)
+    write_csv(constants["output_file_name"], parsed_target, constants["writing_dialect"])
     print(f"DONE\n\nResults can be found in {constants['output_file_name']}")
 
 
@@ -138,7 +139,7 @@ def get_constants(from_file: bool) -> dict:
     return constants
 
 
-def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]) -> list[Row]:
+def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
     """
     Parses a csv file into a list of its rows. Each row is put into a dictionary where the keys are the headers for a
     column and the values are the elements of that row. Rows listed in ignored_rows are not parsed. The header row is
@@ -151,58 +152,30 @@ def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]) -> 
     """
 
     try:
-        with open(file_name) as csvfile:
-            lines = csvfile.readlines()
+        with open(file_name, newline='') as csvfile:
+            dialect = csv.Sniffer().sniff(csvfile.readline())
+            csvfile.seek(0)
+
+            header_reader = csv.reader(csvfile, dialect=dialect)
+            for _ in range(header_line_num):
+                header_reader.__next__()
+
+            headers: list[str] = header_reader.__next__()
+            csvfile.seek(0)
+
+            reader = csv.DictReader(csvfile, fieldnames=headers, dialect=dialect)
+
+            rows: list[Row] = []
+            for i, row in enumerate(reader):
+                if i in ignored_rows or i == header_line_num:
+                    continue
+
+                rows.append(row)
     except FileNotFoundError:
         print(f"Could not find {file_name}", file=sys.stderr)
         exit(1)
 
-    # removing newlines and checking for quotes
-    lines_with_quotes: list[int] = []
-    for i, line in enumerate(lines):
-        lines[i] = line.rstrip()
-
-        if i not in ignored_rows and "\"" in line:
-            lines_with_quotes.append(i)
-
-    headers: list[str] = []
-    rows: list[Row] = []
-    for i, line in enumerate(lines):
-        if i in ignored_rows:
-            continue
-
-        if i in lines_with_quotes:
-            line = normalize_line_with_quotes(line)
-
-        if i == header_line_num:
-            headers = line.split(",")
-        else:
-            rows.append({k: v for (k, v) in zip(headers, line.split(","))})
-
     return rows
-
-
-def normalize_line_with_quotes(line: str) -> str:
-    """
-    Normalizes a line of text by removing the commas and quotes from quoted fields. Does nothing for lines that are
-    already normalized.
-    Ex: one,two,"extra, commas",three --> one,two,extra commas,three
-
-    :param line: A string of text representing a line from a csv file
-    :return: Normalized line
-    """
-
-    if "\"" not in line:
-        return line
-
-    separated_by_quoted_item: list[str] = line.split("\"")
-
-    quoted_item = separated_by_quoted_item[1]
-    normalized_quoted_item = quoted_item.replace(",", "")
-
-    normalized_line: str = separated_by_quoted_item[0] + normalized_quoted_item + separated_by_quoted_item[2]
-
-    return normalized_line
 
 
 def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str: str],
@@ -237,66 +210,52 @@ def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str
                 break
 
 
-def write_csv(file_name: str, data: list[Row]) -> None:
+def write_csv(file_name: str, data: list[Row], dialect: str) -> None:
     """
-    Formats and writes data to a csv from a list of rows where each row is a dictionary containing keys which are the
-    headers and values which are the elements of that row. If there is no file by the given name, one will be created.
-    If a file by the given name already exists, a prompt will ask if it should be overwritten.
+    Writes data to a csv from a list of rows where each row is a dictionary containing keys which are the
+    headers and values which are the elements of that row using the given dialect. If there is no file by the given
+    name, one will be created. If a file by the given name already exists, a prompt will ask if it should be
+    overwritten.
 
     :param file_name: Name of file to be written to or created
     :param data: Data to write to the file
+    :param dialect: csv dialect to use for writing
     :return:
     """
 
-    lines_to_write: list[str] = []
-
-    header_line: str = row_to_string(data[0], header=True)
-    lines_to_write.append(header_line)
-
-    for row in data:
-        lines_to_write.append(row_to_string(row, header=False))
-
-    lines_to_write[-1] = lines_to_write[-1].rstrip()  # all lines get a newline at the end, but the last shouldn't
+    headers: list[str] = data[0].keys()
 
     try:
-        with open(file_name, "x") as f:
-            f.writelines(lines_to_write)
+        write_data(file_name, headers, data, dialect)
     except FileExistsError:
         print(f"File \"{file_name}\" already exists", file=sys.stderr)
         overwrite = input("Overwrite it (y/N)? ").lower()
 
         if overwrite in ["y", "yes"]:
-            with open(file_name, "w") as f:
-                f.writelines(lines_to_write)
+            write_data(file_name, headers, data, dialect, new_file=False)
         else:
             exit(1)
 
 
-def row_to_string(row: Row, header: bool) -> str:
+def write_data(file_name: str, headers: list[str], data: list[Row], dialect: str, new_file: bool = True) -> None:
     """
-    Converts a row (dictionary of headers as keys and elements of row as values) to a string where the elements of that
-    row are separated by commas. Also adds a newline to the end.
+    Writes data to a file by the given name. Will create a file if one by the given name does not exist. If a file by
+    the given name exists and the intent is to have it overwritten, new_file should be false.
 
-    :param row: Row to convert
-    :param header: Whether the row is a header or not
-    :return: String of elements of the row separated by commas
+    :param file_name: Name of file to be written to or created.
+    :param headers: List of the headers for csv file.
+    :param data: Data to write to the file.
+    :param dialect: csv dialect to use for writing
+    :param new_file: If true, tries to create a new file and will not overwrite files by the name file_name. If false,
+    the behavior is the same, but it will overwrite files by the name file_name without warning.
+    :raises FileExistsError: If new_file is true and there is already a file by the name file_name.
+    :return:
     """
 
-    row_str: str = ""
-
-    if header:
-        elements = row.keys()
-    else:
-        elements = row.values()
-
-    for i, element in enumerate(elements):
-        if i == 0:
-            row_str += element
-        else:
-            row_str += f",{element}"
-
-    row_str += "\n"
-    return row_str
+    with open(file_name, "x" if new_file else "w", newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=headers, dialect=dialect)
+        writer.writeheader()
+        writer.writerows(data)
 
 
 if __name__ == "__main__":
