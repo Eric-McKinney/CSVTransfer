@@ -15,6 +15,7 @@ stdin when prompted. An example config file can be seen in config_example.txt.
 """
 import configparser
 import csv
+import os
 import sys
 
 # Custom types for clarity
@@ -23,7 +24,6 @@ Data = str
 Row = dict[Header: Data]
 
 # TODO: Switch to standard configparser library
-# TODO: Add dialect to constants (for writing)
 # TODO: Add command line argument for config file
 # TODO: Update documentation
 # TODO: Make a README
@@ -33,8 +33,7 @@ def main(args: list[str] = None):
     if args is None:
         args = sys.argv[1:]
 
-    read_from_file: bool = input("Read constants from a file (y/N)? ").lower() in ["y", "yes"]
-    constants: dict = get_constants(read_from_file)
+    constants: dict = get_config_constants()
     print("="*80)
     print("Parsing source...", end="", flush=True)
     parsed_source: list[Row] = parse_csv(constants["source_file"], constants["source_header_row_num"],
@@ -51,101 +50,33 @@ def main(args: list[str] = None):
     print(f"DONE\n\nResults can be found in {constants['output_file_name']}")
 
 
-def get_constants(from_file: bool) -> dict:
+def valid_args(args: list[str]) -> bool:
+    for arg in args:
+        # If the args aren't files in the current directory then we can't proceed.
+        path: str = os.path.join(os.getcwd(), arg)
+        if not os.path.exists(path) or not os.path.isfile(path):
+            print(f"Could not find {arg} in the current directory", file=sys.stderr)
+            return False
+
+    return len(args) == 2
+
+
+def get_config_constants() -> configparser.ConfigParser:
     """
-    Assigns constants either from a file or from stdin. The constants are as follows:
+    Assigns config constants from the file .csv_transfer.ini which is described in the README.
 
-    - source_file (string): The name of csv file which the data will be drawn from.
-      The file should be in the same directory as this script.
-    - source_header_row_num (int): Row number to use as header. Row numbers start at 0.
-    - source_ignored_rows (list[int]): List of row numbers for rows to ignore. Ignored rows are not parsed, not included
-      in the data transfer, and are not included in the output.
-    - target_file (string): The name of csv file which the data will be put into. The file should be in the same
-      directory as this script.
-    - target_header_row_num (int): Row number to use as header. Row numbers start at 0.
-    - target_ignored_rows (list[int]): List of row numbers for rows to ignore. Ignored rows are not parsed, not included
-      in the data transfer, and are not included in the output.
-    - output_file_name (string): The name of the resulting csv file (include the file extension).
-    - target_columns (dictionary/map [K: string, V: string]): Indicates the source & destination column pair(s). The
-      source column is the key and the destination column is the associated value.
-    - match_by (tuple [string, string]): The column in each csv file to match the data by (e.g. serial number). The data
-      in these columns should be shared or mostly the same between the two files. The names of the columns don't need to
-      match.
-
-    :param from_file: True if the constants should be loaded from a file, False if constants should be given via stdin
     :return: Dictionary of the constants where the keys are the name of the constants
     """
 
-    constants: dict = {
-        "source_file": "",
-        "source_header_row_num": 0,
-        "source_ignored_rows": [],
-        "target_file": "",
-        "target_header_row_num": 0,
-        "target_ignored_rows": [],
-        "output_file_name": "",
-        "target_columns": {},  # source col: destination col
-        "match_by": ("", "")  # col in source, col in target
-    }
+    config = configparser.ConfigParser(allow_no_value=True)
+    config.read(".csv_transfer.ini")
 
-    if from_file:
-        constants_file_name: str = input("Please type the name of the file: ")
+    for section in ["source", "target"]:
+        for key in ["target_column", "match_by"]:
+            if config[section][key] is None:
+                config[section][key] = input(f"{key} missing for {section}. Input manually: ")
 
-        config = configparser.ConfigParser(allow_no_value=True)
-        config.read(constants_file_name)
-        try:
-            with open(constants_file_name) as f:
-                # Each line is split at the " = " and the latter half is used (without the newline)
-                constants["source_file"] = f.readline().split(" = ")[-1].rstrip()
-                constants["source_header_row_num"] = int(f.readline().split(" = ")[-1].rstrip())
-                source_ignored_rows_strs: list[str] = f.readline().split(" = ")[-1].rstrip().split(",")
-                constants["target_file"] = f.readline().split(" = ")[-1].rstrip()
-                constants["target_header_row_num"] = int(f.readline().split(" = ")[-1].rstrip())
-                target_ignored_rows_strs: list[str] = f.readline().split(" = ")[-1].rstrip().split(",")
-                constants["output_file_name"] = f.readline().split(" = ")[-1].rstrip()
-                target_columns_str: str = f.readline().split(" = ")[-1].rstrip()
-                match_by_str: str = f.readline().split(" = ")[-1].rstrip()
-        except FileNotFoundError:
-            print("Could not find file. Make sure the file is in the same directory as this script.", file=sys.stderr)
-            exit(1)
-    else:
-        constants["source_file"] = input("What is the name of the source file? ")
-        constants["source_header_row_num"] = int(input("What row contains the headers (first row is 0)? "))
-        source_ignored_rows_strs: list[str] = input("Give a comma separated list of row numbers to ignore: ").split(",")
-        constants["target_file"] = input("What is the name of the target file? ")
-        constants["target_header_row_num"] = int(input("What row contains the headers (first row is 0)? "))
-        target_ignored_rows_strs: list[str] = input("Give a comma separated list of row numbers to ignore: ").split(",")
-        constants["output_file_name"] = input("Give a name for the output file: ")
-        target_columns_str: str = input("Give a comma separated list of the columns of data to be moved in pairs of "
-                                        "sources and destinations (in that order).\nEx: source1,dest1,source2,dest2"
-                                        "\nEnter here: ")
-        match_by_str: str = input("Give the names of the columns which the data being transferred should be matched by "
-                                  "in the order of source then target.\nEx: serialnum,serial number\nEnter here: ")
-
-    # Casting ignored row numbers from strings to ints
-    for row in source_ignored_rows_strs:
-        if row == "":  # happens when no numbers are given
-            continue
-        constants["source_ignored_rows"].append(int(row))
-
-    for row in target_ignored_rows_strs:
-        if row == "":
-            continue
-        constants["target_ignored_rows"].append(int(row))
-
-    # Converting from a comma separated list to a dictionary
-    target_columns = {}
-    prev: str = ""
-    for i, col in enumerate(target_columns_str.split(",")):
-        if i % 2 == 1:
-            target_columns[prev] = col
-        else:
-            prev = col
-
-    constants["target_columns"] = target_columns
-    constants["match_by"] = tuple(match_by_str.split(","))  # Converting from a comma separated pair to a tuple
-
-    return constants
+    return config
 
 
 def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
