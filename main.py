@@ -21,7 +21,6 @@ Header = str
 Data = str
 Row = dict[Header: Data]
 
-# TODO: Switch to standard csv library
 # TODO: Switch to standard configparser library
 # TODO: Add dialect to constants (for writing)
 # TODO: Make a README
