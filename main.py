@@ -28,10 +28,28 @@ Row = dict[Header: Data]
 # TODO: Update documentation
 # TODO: Make a README
 
+HELP_MSG = """
+Usage
+
+py main.py [SOURCE_FILE] [TARGET_FILE]
+\t\tEnsure that both files are in the same directory as this script or a subdirectory (use relative path).
+\t\tSee README for more extensive detail.
+"""
+
 
 def main(args: list[str] = None):
     if args is None:
-        args = sys.argv[1:]
+        if len(sys.argv) > 1:
+            args = sys.argv[1:]
+        else:
+            args = [input("Source file: "), input("Target file: ")]
+
+    if ["-h", "--help"] in args:
+        print(HELP_MSG)
+        exit(0)
+
+    if not valid_args(args):
+        raise SystemExit("See README for proper usage or use --help")
 
     constants: dict = get_config_constants()
     print("="*80)
@@ -54,9 +72,18 @@ def valid_args(args: list[str]) -> bool:
     for arg in args:
         # If the args aren't files in the current directory then we can't proceed.
         path: str = os.path.join(os.getcwd(), arg)
-        if not os.path.exists(path) or not os.path.isfile(path):
-            print(f"Could not find {arg} in the current directory", file=sys.stderr)
+        path_exists: bool = os.path.exists(path)
+        is_file: bool = os.path.isfile(path)
+        if not path_exists or not is_file:
+            print(f"Invalid arg: '{arg}'", file=sys.stderr)
+            print(f"{path} exists" if path_exists else f"{path} does not exist", file=sys.stderr)
+            print("Is a file" if is_file else "Is not a file", file=sys.stderr)
             return False
+
+    if len(args) > 2:
+        print("Too many arguments", file=sys.stderr)
+    elif len(args) < 2:
+        print("Too few arguments", file=sys.stderr)
 
     return len(args) == 2
 
