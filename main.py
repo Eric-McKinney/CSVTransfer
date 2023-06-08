@@ -10,10 +10,18 @@ rows.
 Usage
 
 First, before running this script make sure that the two csv files you want to operate on are in the same directory as
-this script. Once you've done that, you can run this script. A config file may be provided or input can be taken from
-stdin when prompted. An example config file can be seen in config_example.txt.
+this script or in a subdirectory. Then make sure you have a config file even if none of the variables have values. An
+example config file can be seen in config_example.txt. Once you've done that, you can run this script by typing
+"py main.py" in the command prompt or shell (while in the same directory). The source csv file and target csv file for
+data transfer can be specified as command line arguments like this "py main.py SOURCE_FILE TARGET_FILE".
+If not provided as command line arguments, they will be taken via stdin when prompted. Same goes for necessary variables
+in the config file. If they don't have values at runtime then they will be assigned values from stdin when prompted.
+Values entered this way will not be saved to the config file. The name of the config file that this script uses can be
+changed by changing the variable CONFIG_FILE_NAME below.
 """
+import configparser
 import csv
+import os
 import sys
 
 # Custom types for clarity
@@ -21,122 +29,145 @@ Header = str
 Data = str
 Row = dict[Header: Data]
 
-# TODO: Switch to standard configparser library
-# TODO: Add dialect to constants (for writing)
+# TODO: Update documentation
 # TODO: Make a README
 
+CONFIG_FILE_NAME: str = "config_example.ini"
+HELP_MSG = """
+Usage
 
-def main():
-    read_from_file: bool = input("Read constants from a file (y/N)? ").lower() in ["y", "yes"]
-    constants: dict = get_constants(read_from_file)
+py main.py [SOURCE_FILE] [TARGET_FILE]
+\tEnsure that both files are in the same directory as this script or a subdirectory (use relative path).
+\tSee README for more extensive detail.
+"""
+
+
+def main(args: list[str] = None):
+    if args is None:
+        if len(sys.argv) > 1:
+            args = sys.argv[1:]
+        else:
+            args = [input("Source file: "), input("Target file: ")]
+
+    if "--help" in args or "-h" in args:
+        print(HELP_MSG)
+        exit(0)
+
+    if not valid_args(args):
+        raise SystemExit("See README for proper usage or use --help")
+
+    config: configparser.ConfigParser = get_config_constants()
     print("="*80)
     print("Parsing source...", end="", flush=True)
-    parsed_source: list[Row] = parse_csv(constants["source_file"], constants["source_header_row_num"],
-                                         constants["source_ignored_rows"])
+    parsed_source: list[Row] = parse_csv(args[0], config.getint("source", "header_row_num"),
+                                         parse_ignored_rows(config["source"]["ignored_rows"]))
     print("DONE\nParsing target...", end="", flush=True)
-    parsed_target: list[Row] = parse_csv(constants["target_file"], constants["target_header_row_num"],
-                                         constants["target_ignored_rows"])
+    parsed_target: list[Row] = parse_csv(args[1], config.getint("target", "header_row_num"),
+                                         parse_ignored_rows(config["target"]["ignored_rows"]))
     print("DONE")
 
     print("Transferring data...", end="", flush=True)
-    transfer_data(parsed_source, parsed_target, constants["target_columns"], constants["match_by"])
+    transfer_data(parsed_source, parsed_target, config["target_columns"], config["source"]["match_by"],
+                  config["target"]["match_by"])
     print("DONE\nWriting results to output file...", end="", flush=True)
-    write_csv(constants["output_file_name"], parsed_target, constants["writing_dialect"])
-    print(f"DONE\n\nResults can be found in {constants['output_file_name']}")
+    write_csv(config["DEFAULT"]["output_file_name"], parsed_target, config["DEFAULT"]["writing_dialect"])
+    print(f"DONE\n\nResults can be found in {config['output_file_name']}")
 
 
-def get_constants(from_file: bool) -> dict:
+def valid_args(args: list[str]) -> bool:
     """
-    Assigns constants either from a file or from stdin. The constants are as follows:
+    Determines if arguments are valid. Arguments should be two file names or relative paths of files that are within the
+    current working directory.
 
-    - source_file (string): The name of csv file which the data will be drawn from.
-      The file should be in the same directory as this script.
-    - source_header_row_num (int): Row number to use as header. Row numbers start at 0.
-    - source_ignored_rows (list[int]): List of row numbers for rows to ignore. Ignored rows are not parsed, not included
-      in the data transfer, and are not included in the output.
-    - target_file (string): The name of csv file which the data will be put into. The file should be in the same
-      directory as this script.
-    - target_header_row_num (int): Row number to use as header. Row numbers start at 0.
-    - target_ignored_rows (list[int]): List of row numbers for rows to ignore. Ignored rows are not parsed, not included
-      in the data transfer, and are not included in the output.
-    - output_file_name (string): The name of the resulting csv file (include the file extension).
-    - target_columns (dictionary/map [K: string, V: string]): Indicates the source & destination column pair(s). The
-      source column is the key and the destination column is the associated value.
-    - match_by (tuple [string, string]): The column in each csv file to match the data by (e.g. serial number). The data
-      in these columns should be shared or mostly the same between the two files. The names of the columns don't need to
-      match.
-
-    :param from_file: True if the constants should be loaded from a file, False if constants should be given via stdin
-    :return: Dictionary of the constants where the keys are the name of the constants
+    :param args: List of command line arguments
+    :return: True if valid, false if not valid
     """
+    if len(args) > 2:
+        print("Too many arguments", file=sys.stderr)
+        return False
+    elif len(args) < 2:
+        print("Too few arguments", file=sys.stderr)
+        return False
 
-    constants: dict = {
-        "source_file": "",
-        "source_header_row_num": 0,
-        "source_ignored_rows": [],
-        "target_file": "",
-        "target_header_row_num": 0,
-        "target_ignored_rows": [],
-        "output_file_name": "",
-        "target_columns": {},  # source col: destination col
-        "match_by": ("", "")  # col in source, col in target
-    }
+    for arg in args:
+        # If the args aren't files (or relative paths) in the current directory then the args are not valid
+        path: str = os.path.join(os.getcwd(), arg)
+        path_exists: bool = os.path.exists(path)
+        is_file: bool = os.path.isfile(path)
+        if not path_exists or not is_file:
+            print(f"\nInvalid arg: '{arg}'", file=sys.stderr)
+            print("" if path_exists else f"{path} does not exist\n", file=sys.stderr, end="")
+            print("" if is_file else f"{arg} is not a file", file=sys.stderr)
+            return False
 
-    if from_file:
-        constants_file_name: str = input("Please type the name of the file: ")
-        try:
-            with open(constants_file_name) as f:
-                # Each line is split at the " = " and the latter half is used (without the newline)
-                constants["source_file"] = f.readline().split(" = ")[-1].rstrip()
-                constants["source_header_row_num"] = int(f.readline().split(" = ")[-1].rstrip())
-                source_ignored_rows_strs: list[str] = f.readline().split(" = ")[-1].rstrip().split(",")
-                constants["target_file"] = f.readline().split(" = ")[-1].rstrip()
-                constants["target_header_row_num"] = int(f.readline().split(" = ")[-1].rstrip())
-                target_ignored_rows_strs: list[str] = f.readline().split(" = ")[-1].rstrip().split(",")
-                constants["output_file_name"] = f.readline().split(" = ")[-1].rstrip()
-                target_columns_str: str = f.readline().split(" = ")[-1].rstrip()
-                match_by_str: str = f.readline().split(" = ")[-1].rstrip()
-        except FileNotFoundError:
-            print("Could not find file. Make sure the file is in the same directory as this script.", file=sys.stderr)
-            exit(1)
-    else:
-        constants["source_file"] = input("What is the name of the source file? ")
-        constants["source_header_row_num"] = int(input("What row contains the headers (first row is 0)? "))
-        source_ignored_rows_strs: list[str] = input("Give a comma separated list of row numbers to ignore: ").split(",")
-        constants["target_file"] = input("What is the name of the target file? ")
-        constants["target_header_row_num"] = int(input("What row contains the headers (first row is 0)? "))
-        target_ignored_rows_strs: list[str] = input("Give a comma separated list of row numbers to ignore: ").split(",")
-        constants["output_file_name"] = input("Give a name for the output file: ")
-        target_columns_str: str = input("Give a comma separated list of the columns of data to be moved in pairs of "
-                                        "sources and destinations (in that order).\nEx: source1,dest1,source2,dest2"
-                                        "\nEnter here: ")
-        match_by_str: str = input("Give the names of the columns which the data being transferred should be matched by "
-                                  "in the order of source then target.\nEx: serialnum,serial number\nEnter here: ")
+    return True
 
-    # Casting ignored row numbers from strings to ints
-    for row in source_ignored_rows_strs:
-        if row == "":  # happens when no numbers are given
-            continue
-        constants["source_ignored_rows"].append(int(row))
 
-    for row in target_ignored_rows_strs:
-        if row == "":
-            continue
-        constants["target_ignored_rows"].append(int(row))
+def get_config_constants() -> configparser.ConfigParser:
+    """
+    Assigns config constants from the file CONFIG_FILE_NAME. Both the constants and the config file are described in the
+    README. Does extra parsing on variables which need to be put into a data structure.
 
-    # Converting from a comma separated list to a dictionary
-    target_columns = {}
-    prev: str = ""
-    for i, col in enumerate(target_columns_str.split(",")):
-        if i % 2 == 1:
-            target_columns[prev] = col
-        else:
-            prev = col
+    :return: ConfigParser object which acts as a map of the config file where the keys are the sections in the config
+    file and the values are dictionaries of that section's variables where the keys are the variable name and the value
+    is the value of that variable (as a string).
+    """
+    if not os.path.exists(os.path.join(os.getcwd(), CONFIG_FILE_NAME)):
+        raise SystemExit(f"Could not find config file '{CONFIG_FILE_NAME}' in the current directory.\n"
+                         f"Either create a config file by that name or change the CONFIG_FILE_NAME variable in this "
+                         f"script.")
 
-    constants["target_columns"] = target_columns
-    constants["match_by"] = tuple(match_by_str.split(","))  # Converting from a comma separated pair to a tuple
+    config = configparser.ConfigParser(allow_no_value=True)
+    config.read(CONFIG_FILE_NAME)
 
-    return constants
+    # Set header_row_num and ignored_rows to defaults if not set (bc apparently configparser doesn't do this)
+    for section in ["source", "target"]:
+        for key in ["header_row_num", "ignored_rows"]:
+            if config[section][key] in [None, ""] and config["DEFAULT"][key] not in [None, ""]:
+                config[section][key] = config["DEFAULT"][key]
+
+    # Collect missing variables via stdin
+    for key in ["output_file_name", "output_dialect"]:
+        if config["DEFAULT"][key] in [None, ""]:
+            config["DEFAULT"][key] = input(f"Default {key} missing. Input manually: ")
+    for section in ["source", "target"]:
+        for key in config[section]:
+            if config[section][key] in [None, ""]:
+                config[section][key] = input(f"{key} missing for {section}. Input manually: ")
+
+    return config
+
+
+def parse_target_columns(config: configparser.ConfigParser) -> dict[str: str]:
+    """
+    Parses the comma separated lists of target columns from the config file into a dictionary.
+
+    :param config: Parsed config file
+    :return: Dictionary with source target column(s) as keys w/corresponding columns from target file as values
+    """
+    source_target_cols: list[str] = config["source"]["target_column(s)"].split(",")
+    target_target_cols: list[str] = config["target"]["target_column(s)"].split(",")
+
+    if len(source_target_cols) != len(target_target_cols):
+        raise SystemExit("Number of target column(s) must be the same for source and target\n"
+                         f"{len(source_target_cols)} target columns for source found\n"
+                         f"{len(target_target_cols)} target columns for target found")
+
+    return {k: v for (k, v) in zip(source_target_cols, target_target_cols)}
+
+
+def parse_ignored_rows(ignored_rows_str: str) -> list[int]:
+    """
+    Converts string of comma separated list of row numbers to a list of integers.
+
+    :param ignored_rows_str: Comma separated list of row numbers
+    :return: List of row numbers
+    """
+    ignored_rows: list[int] = []
+    for row_num in ignored_rows_str.split(","):
+        ignored_rows.append(int(row_num))
+
+    return ignored_rows
 
 
 def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
@@ -150,7 +181,6 @@ def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
     :param ignored_rows: List of row numbers to ignore
     :return: List of the rows of the csv
     """
-
     try:
         with open(file_name, newline='') as csvfile:
             dialect = csv.Sniffer().sniff(csvfile.readline())
@@ -179,30 +209,30 @@ def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
 
 
 def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str: str],
-                  match_by: tuple[str, str]) -> None:
+                  source_match_by: str, target_match_by: str) -> None:
     """
     Moves data from target column(s) (keys of target_columns dictionary) in the parsed source file to the target
     column(s) (values of target_columns dictionary) in the parsed target file. This is done for all the values in the
-    source file from the column specified by match_by (the first string). If a value in the source file from the column
-    specified by match_by does not have a matching value in the target file in the corresponding match_by column (second
-    string) then the data for that value is not transferred.
+    source file from the column specified by source_match_by. If a value in the source file from the column specified
+    by source_match_by does not have a matching value in the target file in the corresponding target_match_by column
+    then the data for that value is not transferred.
 
     :param source: Parsed source file
     :param target: Parsed target file
     :param target_columns: Column(s) whose data will be transferred in source-destination pairs
-    :param match_by: Column from each file to align data by in order of source, target
+    :param source_match_by: Column from source file to align data by
+    :param target_match_by: Column from target file to align data by
     :return:
     """
-
     for row in source:
-        data_to_match_by: str = row[match_by[0]]
+        data_to_match_by: str = row[source_match_by]
         data_to_transfer: dict[str: str] = {}
 
         for header in target_columns.keys():
             data_to_transfer[header] = row[header]
 
         for t_row in target:
-            if t_row[match_by[1]] == data_to_match_by:
+            if t_row[target_match_by] == data_to_match_by:
                 for header in target_columns.keys():
                     t_header = target_columns[header]
                     t_row[t_header] = data_to_transfer[header]
@@ -222,7 +252,6 @@ def write_csv(file_name: str, data: list[Row], dialect: str) -> None:
     :param dialect: csv dialect to use for writing
     :return:
     """
-
     headers: list[str] = data[0].keys()
 
     try:
@@ -251,7 +280,6 @@ def write_data(file_name: str, headers: list[str], data: list[Row], dialect: str
     :raises FileExistsError: If new_file is true and there is already a file by the name file_name.
     :return:
     """
-
     with open(file_name, "x" if new_file else "w", newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=headers, dialect=dialect)
         writer.writeheader()
