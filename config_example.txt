@@ -1,9 +1,0 @@
-source_file = example.csv
-source_header_row_num = 0
-source_ignored_rows = 
-target_file = example3.csv
-target_header_row_num = 1
-target_ignored_rows = 0,5
-output_file_name = output.csv
-target_columns = Favorite Color,favorite color
-match_by = Social Security Number,social security
