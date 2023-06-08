@@ -113,7 +113,7 @@ class MyTestCase(unittest.TestCase):
             main.get_config_constants()
 
     def test_get_constants_from_stdin(self):  # Give same inputs for the function call and the test inputs
-        main.CONFIG_FILE_NAME = "config_example2.ini"
+        main.CONFIG_FILE_NAME = "empty_config.ini"
         print("FUNCTION INPUTS")
         print("="*80)
         config: configparser.ConfigParser = main.get_config_constants()
