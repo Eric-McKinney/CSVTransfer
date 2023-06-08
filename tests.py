@@ -16,9 +16,11 @@ class MyTestCase(unittest.TestCase):
     def test_invalid_args(self):
         args1: list[str] = ["does_not_exist.file", "example.csv"]
         args2: list[str] = ["example2.csv", "venv"]
+        args3: list[str] = ["example.csv", "example2.csv", "example3.csv"]
 
         self.assertFalse(main.valid_args(args1))
         self.assertFalse(main.valid_args(args2))
+        self.assertFalse(main.valid_args(args3))
 
     def test_parse_csv(self):
         parsed_csv: list[main.Row] = main.parse_csv("example.csv", 0, [])
