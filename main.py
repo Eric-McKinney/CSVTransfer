@@ -51,20 +51,21 @@ def main(args: list[str] = None):
     if not valid_args(args):
         raise SystemExit("See README for proper usage or use --help")
 
-    config: dict = get_config_constants()
+    config: configparser.ConfigParser = get_config_constants()
     print("="*80)
     print("Parsing source...", end="", flush=True)
-    parsed_source: list[Row] = parse_csv(args[0], config["source"]["header_row_num"],
-                                         config["source"]["ignored_rows"])
+    parsed_source: list[Row] = parse_csv(args[0], config.getint("source", "header_row_num"),
+                                         config.getint("source", "ignored_rows"))
     print("DONE\nParsing target...", end="", flush=True)
-    parsed_target: list[Row] = parse_csv(args[1], config["target"]["header_row_num"],
-                                         config["target"]["ignored_rows"])
+    parsed_target: list[Row] = parse_csv(args[1], config.getint("target", "header_row_num"),
+                                         config.getint("target", "ignored_rows"))
     print("DONE")
 
     print("Transferring data...", end="", flush=True)
-    transfer_data(parsed_source, parsed_target, config["target_columns"], config["match_by"])
+    transfer_data(parsed_source, parsed_target, config["target_columns"], config["source"]["match_by"],
+                  config["target"]["match_by"])
     print("DONE\nWriting results to output file...", end="", flush=True)
-    write_csv(config["output_file_name"], parsed_target, config["writing_dialect"])
+    write_csv(config["DEFAULT"]["output_file_name"], parsed_target, config["DEFAULT"]["writing_dialect"])
     print(f"DONE\n\nResults can be found in {config['output_file_name']}")
 
 
@@ -114,8 +115,22 @@ def get_config_constants() -> configparser.ConfigParser:
     return config
 
 
-def parse_unprocessed_fields(config: configparser.ConfigParser) -> None:
-    pass
+def parse_target_columns(config: configparser.ConfigParser) -> dict[str: str]:
+    """
+    Parses the comma separated lists of target columns from the config file into a dictionary
+
+    :param config: Parsed config file
+    :return: Dictionary with source target column(s) as keys w/corresponding columns from target file as values
+    """
+    source_target_cols: list[str] = config["source"]["target_column(s)"].split(",")
+    target_target_cols: list[str] = config["target"]["target_column(s)"].split(",")
+
+    if len(source_target_cols) != len(target_target_cols):
+        raise SystemExit("Number of target column(s) must be the same for source and target\n"
+                         f"{len(source_target_cols)} target columns for source found\n"
+                         f"{len(target_target_cols)} target columns for target found")
+
+    return {k: v for (k, v) in zip(source_target_cols, target_target_cols)}
 
 
 def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
@@ -158,30 +173,31 @@ def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
 
 
 def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str: str],
-                  match_by: tuple[str, str]) -> None:
+                  source_match_by: str, target_match_by: str) -> None:
     """
     Moves data from target column(s) (keys of target_columns dictionary) in the parsed source file to the target
     column(s) (values of target_columns dictionary) in the parsed target file. This is done for all the values in the
-    source file from the column specified by match_by (the first string). If a value in the source file from the column
-    specified by match_by does not have a matching value in the target file in the corresponding match_by column (second
-    string) then the data for that value is not transferred.
+    source file from the column specified by source_match_by. If a value in the source file from the column specified
+    by source_match_by does not have a matching value in the target file in the corresponding target_match_by column
+    then the data for that value is not transferred.
 
     :param source: Parsed source file
     :param target: Parsed target file
     :param target_columns: Column(s) whose data will be transferred in source-destination pairs
-    :param match_by: Column from each file to align data by in order of source, target
+    :param source_match_by: Column from source file to align data by
+    :param target_match_by: Column from target file to align data by
     :return:
     """
 
     for row in source:
-        data_to_match_by: str = row[match_by[0]]
+        data_to_match_by: str = row[source_match_by]
         data_to_transfer: dict[str: str] = {}
 
         for header in target_columns.keys():
             data_to_transfer[header] = row[header]
 
         for t_row in target:
-            if t_row[match_by[1]] == data_to_match_by:
+            if t_row[target_match_by] == data_to_match_by:
                 for header in target_columns.keys():
                     t_header = target_columns[header]
                     t_row[t_header] = data_to_transfer[header]
