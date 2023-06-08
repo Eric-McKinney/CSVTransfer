@@ -28,6 +28,7 @@ Row = dict[Header: Data]
 # TODO: Update documentation
 # TODO: Make a README
 
+CONFIG_FILE_NAME: str = ".csv_transfer.ini"
 HELP_MSG = """
 Usage
 
@@ -97,13 +98,13 @@ def valid_args(args: list[str]) -> bool:
 
 def get_config_constants() -> configparser.ConfigParser:
     """
-    Assigns config constants from the file .csv_transfer.ini which is described in the README. Does extra parsing on
-    variables which need to be put into a data structure.
+    Assigns config constants from the file CONFIG_FILE_NAME constants which is described in the README. Does extra
+    parsing on variables which need to be put into a data structure.
 
     :return: Dictionary of the constants where the keys are the name of the constants
     """
     config = configparser.ConfigParser(allow_no_value=True)
-    config.read(".csv_transfer.ini")
+    config.read(CONFIG_FILE_NAME)
 
     # Collect missing variables via stdin
     for section in ["source", "target"]:
