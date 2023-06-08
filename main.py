@@ -70,13 +70,21 @@ def main(args: list[str] = None):
 
 def valid_args(args: list[str]) -> bool:
     """
-    Determines if arguments are valid. Arguments should be two file names or relative paths of files
+    Determines if arguments are valid. Arguments should be two file names or relative paths of files that are within the
+    current working directory.
 
     :param args: List of command line arguments
     :return: True if valid, false if not valid
     """
+    if len(args) > 2:
+        print("Too many arguments", file=sys.stderr)
+        return False
+    elif len(args) < 2:
+        print("Too few arguments", file=sys.stderr)
+        return False
+
     for arg in args:
-        # If the args aren't files in the current directory then we can't proceed.
+        # If the args aren't files (or relative paths) in the current directory then the args are not valid
         path: str = os.path.join(os.getcwd(), arg)
         path_exists: bool = os.path.exists(path)
         is_file: bool = os.path.isfile(path)
@@ -86,12 +94,7 @@ def valid_args(args: list[str]) -> bool:
             print("" if is_file else f"{arg} is not a file", file=sys.stderr)
             return False
 
-    if len(args) > 2:
-        print("Too many arguments", file=sys.stderr)
-    elif len(args) < 2:
-        print("Too few arguments", file=sys.stderr)
-
-    return len(args) == 2
+    return True
 
 
 def get_config_constants() -> configparser.ConfigParser:
