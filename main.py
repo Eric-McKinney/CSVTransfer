@@ -81,9 +81,9 @@ def valid_args(args: list[str]) -> bool:
         path_exists: bool = os.path.exists(path)
         is_file: bool = os.path.isfile(path)
         if not path_exists or not is_file:
-            print(f"Invalid arg: '{arg}'", file=sys.stderr)
-            print(f"{path} exists" if path_exists else f"{path} does not exist", file=sys.stderr)
-            print("Is a file" if is_file else "Is not a file", file=sys.stderr)
+            print(f"\nInvalid arg: '{arg}'", file=sys.stderr)
+            print("" if path_exists else f"{path} does not exist\n", file=sys.stderr, end="")
+            print("" if is_file else f"{arg} is not a file", file=sys.stderr)
             return False
 
     if len(args) > 2:
