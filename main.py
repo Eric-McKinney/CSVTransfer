@@ -55,10 +55,10 @@ def main(args: list[str] = None):
     print("="*80)
     print("Parsing source...", end="", flush=True)
     parsed_source: list[Row] = parse_csv(args[0], config.getint("source", "header_row_num"),
-                                         config.getint("source", "ignored_rows"))
+                                         parse_ignored_rows(config["source"]["ignored_rows"]))
     print("DONE\nParsing target...", end="", flush=True)
     parsed_target: list[Row] = parse_csv(args[1], config.getint("target", "header_row_num"),
-                                         config.getint("target", "ignored_rows"))
+                                         parse_ignored_rows(config["target"]["ignored_rows"]))
     print("DONE")
 
     print("Transferring data...", end="", flush=True)
@@ -102,7 +102,6 @@ def get_config_constants() -> configparser.ConfigParser:
 
     :return: Dictionary of the constants where the keys are the name of the constants
     """
-
     config = configparser.ConfigParser(allow_no_value=True)
     config.read(".csv_transfer.ini")
 
@@ -117,7 +116,7 @@ def get_config_constants() -> configparser.ConfigParser:
 
 def parse_target_columns(config: configparser.ConfigParser) -> dict[str: str]:
     """
-    Parses the comma separated lists of target columns from the config file into a dictionary
+    Parses the comma separated lists of target columns from the config file into a dictionary.
 
     :param config: Parsed config file
     :return: Dictionary with source target column(s) as keys w/corresponding columns from target file as values
@@ -133,6 +132,20 @@ def parse_target_columns(config: configparser.ConfigParser) -> dict[str: str]:
     return {k: v for (k, v) in zip(source_target_cols, target_target_cols)}
 
 
+def parse_ignored_rows(ignored_rows_str: str) -> list[int]:
+    """
+    Converts string of comma separated list of row numbers to a list of integers.
+
+    :param ignored_rows_str: Comma separated list of row numbers
+    :return: List of row numbers
+    """
+    ignored_rows: list[int] = []
+    for row_num in ignored_rows_str.split(","):
+        ignored_rows.append(int(row_num))
+
+    return ignored_rows
+
+
 def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
     """
     Parses a csv file into a list of its rows. Each row is put into a dictionary where the keys are the headers for a
@@ -144,7 +157,6 @@ def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
     :param ignored_rows: List of row numbers to ignore
     :return: List of the rows of the csv
     """
-
     try:
         with open(file_name, newline='') as csvfile:
             dialect = csv.Sniffer().sniff(csvfile.readline())
@@ -188,7 +200,6 @@ def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str
     :param target_match_by: Column from target file to align data by
     :return:
     """
-
     for row in source:
         data_to_match_by: str = row[source_match_by]
         data_to_transfer: dict[str: str] = {}
@@ -217,7 +228,6 @@ def write_csv(file_name: str, data: list[Row], dialect: str) -> None:
     :param dialect: csv dialect to use for writing
     :return:
     """
-
     headers: list[str] = data[0].keys()
 
     try:
@@ -246,7 +256,6 @@ def write_data(file_name: str, headers: list[str], data: list[Row], dialect: str
     :raises FileExistsError: If new_file is true and there is already a file by the name file_name.
     :return:
     """
-
     with open(file_name, "x" if new_file else "w", newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=headers, dialect=dialect)
         writer.writeheader()
