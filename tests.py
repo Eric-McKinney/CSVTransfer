@@ -1,3 +1,4 @@
+import configparser
 import unittest
 import main
 
@@ -62,37 +63,44 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(expected_parsed_csv, parsed_csv)
 
     def test_get_constants_from_file(self):
-        print("Give the name of a config file that exists\n")
-        constants: dict = main.get_constants(True)
-
+        config: configparser.ConfigParser = main.get_config_constants()
         expected_constants: dict = {
-            "source_file": "example.csv",
-            "source_header_row_num": 0,
-            "source_ignored_rows": [],
-            "target_file": "example3.csv",
-            "target_header_row_num": 1,
-            "target_ignored_rows": [0],
-            "output_file_name": "output.csv",
-            "target_columns": {"Favorite Color": "favorite color"},
-            "match_by": ("Social Security Number", "social security")
+            "DEFAULT": {
+                "header_row_num": "0",
+                "ignored_rows": "-1",
+                "output_file_name": "output.csv",
+                "output_dialect": "excel"
+            },
+            "source": {
+                "header_row_num": "0",
+                "ignored_rows": "-1",
+                "target_column(s)": "Favorite Color",
+                "match_by": "Social Security Number"
+            },
+            "target": {
+                "header_row_num": "1",
+                "ignored_rows": "0,5",
+                "target_column(s)": "favorite color",
+                "match_by": "social security"
+            }
         }
 
-        self.assertEqual(expected_constants, constants)
+        for section in expected_constants:
+            for key in expected_constants[section]:
+                self.assertEqual(expected_constants[section][key], config[section][key])
 
     def test_get_constants_from_nonexistent_file(self):
-        print("Give the name of a file that doesn't exist\n")
-
-        with self.assertRaises(SystemExit) as cm:
-            main.get_constants(True)
-
-        self.assertEqual(1, cm.exception.code)
+        main.CONFIG_FILE_NAME = "does_not_exist_for_test_to_work.ini"
+        with self.assertRaises(SystemExit):
+            main.get_config_constants()
 
     def test_get_constants_from_stdin(self):  # Give same inputs for the function call and the test inputs
+        main.CONFIG_FILE_NAME = "config_example2.ini"
         print("FUNCTION INPUTS")
         print("="*80)
-        constants: dict = main.get_constants(False)
-
+        config: configparser.ConfigParser = main.get_config_constants()
         print("="*80)
+
         print("BEGIN TEST INPUTS")
         print("(Give same inputs as you did for the function otherwise the test will fail)")
         print("\nNote:\tFor some reason I have yet to figure out, the prompts sometimes don't print until after you "
@@ -102,46 +110,29 @@ class MyTestCase(unittest.TestCase):
               "PyCharm IDE.")
         print("="*80)
         expected_constants: dict = {
-            "source_file": input("Source file name: "),
-            "source_header_row_num": int(input("Source header row number: ")),
-            "source_ignored_rows": input("Ignored rows: ").split(","),
-            "target_file": input("Target file name: "),
-            "target_header_row_num": int(input("Target header row number: ")),
-            "target_ignored_rows": input("Ignored rows: ").split(","),
-            "output_file_name": input("Output file name: "),
-            "target_columns": {}
+            "DEFAULT": {
+                "header_row_num": "",
+                "ignored_rows": "",
+                "output_file_name": input("output_file_name: "),
+                "output_dialect": input("output_dialect: ")
+            },
+            "source": {
+                "header_row_num": input("source header_row_num: "),
+                "ignored_rows": input("source ignored_rows: "),
+                "target_column(s)": input("source target_column(s): "),
+                "match_by": input("source match_by: ")
+            },
+            "target": {
+                "header_row_num": input("target header_row_num: "),
+                "ignored_rows": input("target ignored_rows: "),
+                "target_column(s)": input("target target_column(s): "),
+                "match_by": input("target match_by: ")
+            }
         }
 
-        # I wanted the prompts to go in order, but as a result when numbers aren't given empty strings sneak in
-        # The rest is just casting to ints from strings
-        blanks = 0
-        for i, row in enumerate(expected_constants["source_ignored_rows"]):
-            if row == "":
-                blanks += 1
-                continue
-            expected_constants["source_ignored_rows"][i] = int(row)
-        for _ in range(blanks):
-            expected_constants["source_ignored_rows"].remove("")
-
-        blanks = 0
-        for i, row in enumerate(expected_constants["target_ignored_rows"]):
-            if row == "":
-                blanks += 1
-                continue
-            expected_constants["target_ignored_rows"][i] = int(row)
-        for _ in range(blanks):
-            expected_constants["target_ignored_rows"].remove("")
-
-        num_target_col_pairs: int = int(input("How many target columns for each file? "))
-        for i in range(num_target_col_pairs):
-            source_col = input(f"Source target column {i + 1}: ")
-            dest_col = input(f"Destination target column {i + 1}: ")
-            expected_constants["target_columns"][source_col] = dest_col
-
-        expected_constants["match_by"] = (input("Source file column to match by: "),
-                                          input("Target file column to match by: "))
-
-        self.assertEqual(expected_constants, constants)
+        for section in expected_constants:
+            for key in expected_constants[section]:
+                self.assertEqual(expected_constants[section][key], config[section][key])
 
     def test_write_to_csv(self):
         sample_data: list[main.Row] = [
@@ -181,9 +172,10 @@ class MyTestCase(unittest.TestCase):
             {"t": "7", "func1": "19", "func2": "2"}
         ]
         target_columns: dict[str: str] = {"x^2": "func2"}
-        match_by: tuple[str, str] = ("x", "t")
+        source_match_by: str = "x"
+        target_match_by: str = "t"
 
-        main.transfer_data(source, target, target_columns, match_by)
+        main.transfer_data(source, target, target_columns, source_match_by, target_match_by)
 
         expected_target = [
             {"t": "1", "func1": "2", "func2": "1"},
@@ -212,9 +204,10 @@ class MyTestCase(unittest.TestCase):
             {"song": "505", "rating": "10/10"}
         ]
         target_columns: dict[str: str] = {"Rating": "rating"}
-        match_by: tuple[str, str] = ("Song", "song")
+        source_match_by: str = "Song"
+        target_match_by: str = "song"
 
-        main.transfer_data(source, target, target_columns, match_by)
+        main.transfer_data(source, target, target_columns, source_match_by, target_match_by)
 
         expected_target = [
             {"song": "Alone Infection", "rating": "9/10"},
@@ -226,42 +219,53 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(expected_target, target)
 
     def test_everything_together(self):
-        print("="*80)
-        print("Use config_example.txt for this test")
-        print("="*80)
-        constants: dict = main.get_constants(True)
-        parsed_source: list[main.Row] = main.parse_csv(constants["source_file"], constants["source_header_row_num"],
-                                                       constants["source_ignored_rows"])
-        parsed_target: list[main.Row] = main.parse_csv(constants["target_file"], constants["target_header_row_num"],
-                                                       constants["target_ignored_rows"])
-        main.transfer_data(parsed_source, parsed_target, constants["target_columns"], constants["match_by"])
-        main.write_csv(constants["output_file_name"], parsed_target, constants["write_dialect"])
+        main.CONFIG_FILE_NAME = "config_example.ini"
+        config: configparser.ConfigParser = main.get_config_constants()
+        args = ["example.csv", "example3.csv"]
+        parsed_source: list[main.Row] = main.parse_csv(args[0], config.getint("source", "header_row_num"),
+                                                       main.parse_ignored_rows(config["source"]["ignored_rows"]))
+        parsed_target: list[main.Row] = main.parse_csv(args[1], config.getint("target", "header_row_num"),
+                                                       main.parse_ignored_rows(config["target"]["ignored_rows"]))
+        main.transfer_data(parsed_source, parsed_target, main.parse_target_columns(config),
+                           config["source"]["match_by"], config["target"]["match_by"])
+        main.write_csv(config["DEFAULT"]["output_file_name"], parsed_target, config["DEFAULT"]["output_dialect"])
 
-        with open(constants["output_file_name"]) as f:
+        with open(config["DEFAULT"]["output_file_name"]) as f:
             lines = f.readlines()
 
         expected_constants = {
-            "source_file": "example.csv",
-            "source_header_row_num": 0,
-            "source_ignored_rows": [],
-            "target_file": "example3.csv",
-            "target_header_row_num": 1,
-            "target_ignored_rows": [0, 5],
-            "output_file_name": "output.csv",
-            "target_columns": {"Favorite Color": "favorite color"},
-            "match_by": ("Social Security Number", "social security")
+            "DEFAULT": {
+                "header_row_num": "0",
+                "ignored_rows": "-1",
+                "output_file_name": "output.csv",
+                "output_dialect": "excel"
+            },
+            "source": {
+                "header_row_num": "0",
+                "ignored_rows": "-1",
+                "target_column(s)": "Favorite Color",
+                "match_by": "Social Security Number"
+            },
+            "target": {
+                "header_row_num": "1",
+                "ignored_rows": "0,5",
+                "target_column(s)": "favorite color",
+                "match_by": "social security"
+            }
         }
 
         expected_lines = [
-            "social security,d.o.b,last name first name,employment status,favorite color,hobbies,comments\n",
-            ",,Bob Joe,employed,Teal,Tennis,\n",
-            "1234321,,Wayne Emily,,Yellow,,No comment\n",
-            "234111,1/1/1970,Last First,,Green,Deliberate misinformation,Mr. Unix Epoch\n",
-            "565,,,employed,Royal purple,No hobby,"
+            "social security,d.o.b,\"last name, first name\",employment status,favorite color,hobbies,comments\n",
+            ",,\"Bob, Joe\",employed,Teal,Tennis,\n",
+            "1234321,,\"Wayne, Emily\",,Yellow,,No comment\n",
+            "234111,1/1/1970,\"Last, First\",,Green,Deliberate misinformation,Mr. Unix Epoch\n",
+            "565,,,employed,Royal purple,No hobby,\n"
         ]
 
-        self.assertEqual(expected_constants, constants)
         self.assertEqual(expected_lines, lines)
+        for section in expected_constants:
+            for key in expected_constants[section]:
+                self.assertEqual(expected_constants[section][key], config[section][key])
 
 
 if __name__ == '__main__':
