@@ -23,8 +23,6 @@ Header = str
 Data = str
 Row = dict[Header: Data]
 
-# TODO: Switch to standard configparser library
-# TODO: Add command line argument for config file
 # TODO: Update documentation
 # TODO: Make a README
 
