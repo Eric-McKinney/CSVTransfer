@@ -10,8 +10,14 @@ rows.
 Usage
 
 First, before running this script make sure that the two csv files you want to operate on are in the same directory as
-this script. Once you've done that, you can run this script. A config file may be provided or input can be taken from
-stdin when prompted. An example config file can be seen in config_example.txt.
+this script or in a subdirectory. Then make sure you have a config file even if none of the variables have values. An
+example config file can be seen in config_example.txt. Once you've done that, you can run this script by typing
+"py main.py" in the command prompt or shell (while in the same directory). The source csv file and target csv file for
+data transfer can be specified as command line arguments like this "py main.py SOURCE_FILE TARGET_FILE".
+If not provided as command line arguments, they will be taken via stdin when prompted. Same goes for necessary variables
+in the config file. If they don't have values at runtime then they will be assigned values from stdin when prompted.
+Values entered this way will not be saved to the config file. The name of the config file that this script uses can be
+changed by changing the variable CONFIG_FILE_NAME below.
 """
 import configparser
 import csv
@@ -31,8 +37,8 @@ HELP_MSG = """
 Usage
 
 py main.py [SOURCE_FILE] [TARGET_FILE]
-\t\tEnsure that both files are in the same directory as this script or a subdirectory (use relative path).
-\t\tSee README for more extensive detail.
+\tEnsure that both files are in the same directory as this script or a subdirectory (use relative path).
+\tSee README for more extensive detail.
 """
 
 
@@ -43,7 +49,7 @@ def main(args: list[str] = None):
         else:
             args = [input("Source file: "), input("Target file: ")]
 
-    if ["-h", "--help"] in args:
+    if "--help" in args or "-h" in args:
         print(HELP_MSG)
         exit(0)
 
@@ -99,10 +105,12 @@ def valid_args(args: list[str]) -> bool:
 
 def get_config_constants() -> configparser.ConfigParser:
     """
-    Assigns config constants from the file CONFIG_FILE_NAME constants which is described in the README. Does extra
-    parsing on variables which need to be put into a data structure.
+    Assigns config constants from the file CONFIG_FILE_NAME. Both the constants and the config file are described in the
+    README. Does extra parsing on variables which need to be put into a data structure.
 
-    :return: Dictionary of the constants where the keys are the name of the constants
+    :return: ConfigParser object which acts as a map of the config file where the keys are the sections in the config
+    file and the values are dictionaries of that section's variables where the keys are the variable name and the value
+    is the value of that variable (as a string).
     """
     if not os.path.exists(os.path.join(os.getcwd(), CONFIG_FILE_NAME)):
         raise SystemExit(f"Could not find config file '{CONFIG_FILE_NAME}' in the current directory.\n"
