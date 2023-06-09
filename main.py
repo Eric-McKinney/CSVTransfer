@@ -24,6 +24,14 @@ import csv
 import os
 import sys
 
+# TODO: Field validation, specify format (regex)
+# TODO: Move file name to config file
+# TODO: Put unmatched things in a separate output file
+
+# Long term
+# TODO: Multiple files cross-referencing (possibly on different fields)
+# TODO: in a config file can specify based on a machine type what files/sources to expect from (ninite, etc.)
+
 # Custom types for clarity
 Header = str
 Data = str
@@ -71,11 +79,11 @@ def main(args: list[str] = None):
     print("DONE")
 
     print("Transferring data...", end="", flush=True)
-    transfer_data(parsed_source, parsed_target, config["target_columns"], config["source"]["match_by"],
+    transfer_data(parsed_source, parsed_target, parse_target_columns(config), config["source"]["match_by"],
                   config["target"]["match_by"])
     print("DONE\nWriting results to output file...", end="", flush=True)
-    write_csv(config["DEFAULT"]["output_file_name"], parsed_target, config["DEFAULT"]["writing_dialect"])
-    print(f"DONE\n\nResults can be found in {config['output_file_name']}")
+    write_csv(config["DEFAULT"]["output_file_name"], parsed_target, config["DEFAULT"]["output_dialect"])
+    print(f"DONE\n\nResults can be found in {config['DEFAULT']['output_file_name']}")
 
 
 def valid_args(args: list[str]) -> bool:
