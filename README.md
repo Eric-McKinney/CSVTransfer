@@ -29,7 +29,11 @@ where you want them, fill out the config file with at bare minimum the target
 column(s) and the column to match by for the source file and target file.
 Then in the command prompt or shell (in the same directory as main.py) do 
 `py main.py`. Alternatively, provide the source and target file names as
-command line arguments like so `py main.py SOURCE_FILE TARGET_FILE`.
+command line arguments like so `py main.py [OPTION] SOURCE_FILE TARGET_FILE`.
+
+### Options
+The only options are `--help`, `-h`, and `--debug`. The debug option can only
+be used when the source and target files are given as command line arguments.
 
 ## Config File
 You should have downloaded the `config_template.ini` file. By default, the
