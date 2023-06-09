@@ -58,25 +58,25 @@ transferring data, and putting data in the output file. Any negative value or
 out of bounds value effectively means nothing. The order of the numbers does
 not matter.
 
-output_file_name
+**output_file_name**
 > As the name suggests, it is the name of the output file. If this collides with
 a file in the same directory as the script, you will be prompted with a choice of
 whether you want to overwrite said file.
 
-output_dialect
-: The dialect to write the output csv file in. Valid dialects include unix,
+**output_dialect**
+> The dialect to write the output csv file in. Valid dialects include unix,
 excel, and excel_tab. The default and the one you probably want is excel. The
 dialect only determines things like what to quote, line terminator, etc. More
 info can be found [here](https://docs.python.org/3/library/csv.html#csv.excel).
 
-target_column(s)
-: A comma separated list of the headers whose columns should be used in the data
+**target_column(s)**
+> A comma separated list of the headers whose columns should be used in the data
 transfer. The number of headers given should be the same between source and 
 target. The order matters as the first header from the source will be matched to
 the first header for the target, and the same goes for the second, third, etc.
 
-match_by
-: The header of the column to use for matching data during the transfer. The data
+**match_by**
+> The header of the column to use for matching data during the transfer. The data
 in this column should be shared between the two files or at least match to some
 degree. Only data that can be matched to an item from this column in both files
 will be transferred. The data in this column should also ideally be unique. For
