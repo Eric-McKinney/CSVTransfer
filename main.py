@@ -29,9 +29,6 @@ Header = str
 Data = str
 Row = dict[Header: Data]
 
-# TODO: Update documentation
-# TODO: Make a README
-
 CONFIG_FILE_NAME: str = "config_template.ini"
 HELP_MSG = """
 Usage
