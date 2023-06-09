@@ -48,15 +48,17 @@ and only one column to match by.
 ### Config File Fields
 The fields are as follows:
 
-header_row_num
-: The number of the row (starting at 0) which contains the headers you want to
-use.
+**header_row_num**
+    
+    The number of the row (starting at 0) which contains the headers you want to
+    use.
 
-ignored_rows
-: A comma separated list of numbers of rows to ignore while parsing, 
-transferring data, and putting data in the output file. Any negative value or
-out of bounds value effectively means nothing. The order of the numbers does
-not matter.
+**ignored_rows**
+
+    A comma separated list of numbers of rows to ignore while parsing, 
+    transferring data, and putting data in the output file. Any negative value or
+    out of bounds value effectively means nothing. The order of the numbers does
+    not matter.
 
 output_file_name
 : As the name suggests, it is the name of the output file. If this collides with
