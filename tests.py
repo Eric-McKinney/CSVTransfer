@@ -158,9 +158,9 @@ class MyTestCase(unittest.TestCase):
             {"Name": "Test", "Occupation": "None"},
             {"Name": "Batman", "Occupation": "Hero"}
         ]
-        main.write_csv("test_output.csv", sample_data, dialect="excel")
+        main.write_csv("test_outputs/test_output.csv", sample_data, dialect="excel")
 
-        with open("test_output.csv") as f:
+        with open("test_outputs/test_output.csv") as f:
             lines = f.readlines()
 
         expected_lines = [
@@ -246,9 +246,10 @@ class MyTestCase(unittest.TestCase):
                                                        main.parse_ignored_rows(config["target"]["ignored_rows"]))
         main.transfer_data(parsed_source, parsed_target, main.parse_target_columns(config),
                            config["source"]["match_by"], config["target"]["match_by"])
-        main.write_csv(config["DEFAULT"]["output_file_name"], parsed_target, config["DEFAULT"]["output_dialect"])
+        main.write_csv(f'test_outputs/{config["DEFAULT"]["output_file_name"]}', parsed_target,
+                       config["DEFAULT"]["output_dialect"])
 
-        with open(config["DEFAULT"]["output_file_name"]) as f:
+        with open(f'test_outputs/{config["DEFAULT"]["output_file_name"]}') as f:
             lines = f.readlines()
 
         expected_constants = {
