@@ -30,11 +30,13 @@ Data = str
 Row = dict[Header: Data]
 
 CONFIG_FILE_NAME: str = "config_template.ini"
+DEBUG: bool = False  # either change this here or use --debug from command line
 HELP_MSG = """
 Usage
 
-py main.py [SOURCE_FILE] [TARGET_FILE]
-\tEnsure that both files are in the same directory as this script or a subdirectory (use relative path).
+py main.py [OPTION] [SOURCE_FILE] [TARGET_FILE]
+\tEnsure that both files are in the same directory as this script or a subdirectory (use relative path). The --debug
+\toption will only work if the source and target files are given as command line arguments as well.
 \tSee README for more extensive detail.
 """
 
@@ -49,6 +51,11 @@ def main(args: list[str] = None):
     if "--help" in args or "-h" in args:
         print(HELP_MSG)
         exit(0)
+
+    if "--debug" in args:
+        global DEBUG  # I know it's not great to do this, but this is the only place DEBUG is changed
+        DEBUG = True
+        args.remove("--debug")
 
     if not valid_args(args):
         raise SystemExit("See README for proper usage or use --help")
@@ -194,6 +201,8 @@ def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
 
             rows: list[Row] = []
             for i, row in enumerate(reader):
+                if DEBUG:
+                    print(f"Line #{i}: {row}")
                 if i in ignored_rows or i == header_line_num:
                     continue
 
