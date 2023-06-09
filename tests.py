@@ -5,25 +5,25 @@ import main
 
 class MyTestCase(unittest.TestCase):
     def test_valid_args(self):
-        args1: list[str] = ["example.csv", "example2.csv"]
-        args2: list[str] = ["example2.csv", "example3.csv"]
-        args3: list[str] = ["example.csv", "example.csv"]
+        args1: list[str] = ["example_files/example.csv", "example_files/example2.csv"]
+        args2: list[str] = ["example_files/example2.csv", "example_files/example3.csv"]
+        args3: list[str] = ["example_files/example.csv", "example_files/example.csv"]
 
         self.assertTrue(main.valid_args(args1))
         self.assertTrue(main.valid_args(args2))
         self.assertTrue(main.valid_args(args3))
 
     def test_invalid_args(self):
-        args1: list[str] = ["does_not_exist.file", "example.csv"]
-        args2: list[str] = ["example2.csv", "venv"]
-        args3: list[str] = ["example.csv", "example2.csv", "example3.csv"]
+        args1: list[str] = ["does_not_exist.file", "example_files/example.csv"]
+        args2: list[str] = ["example_files/example2.csv", "venv"]
+        args3: list[str] = ["example_files/example.csv", "example_files/example2.csv", "example_files/example3.csv"]
 
         self.assertFalse(main.valid_args(args1))
         self.assertFalse(main.valid_args(args2))
         self.assertFalse(main.valid_args(args3))
 
     def test_parse_csv(self):
-        parsed_csv: list[main.Row] = main.parse_csv("example.csv", 0, [])
+        parsed_csv: list[main.Row] = main.parse_csv("example_files/example.csv", 0, [])
         expected_parsed_csv: list[main.Row] = [
             {"Name": "John Smith", "Date of birth": "3/24/1989", "Social Security Number": "123456",
              "Employment Status": "Employed", "Favorite Color": "Red"},
@@ -38,7 +38,7 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(expected_parsed_csv, parsed_csv)
 
     def test_parse_csv2(self):
-        parsed_csv: list[main.Row] = main.parse_csv("example2.csv", 0, [])
+        parsed_csv: list[main.Row] = main.parse_csv("example_files/example2.csv", 0, [])
         expected_parsed_csv: list[main.Row] = [
             {"name": "First Last", "ssn": "234111", "fav color": "", "state of residence": "Ohio"},
             {"name": "", "ssn": "987654321", "fav color": "Orange", "state of residence": "Texas"},
@@ -49,7 +49,7 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(expected_parsed_csv, parsed_csv)
 
     def test_parse_csv3(self):
-        parsed_csv: list[main.Row] = main.parse_csv("example3.csv", 1, [0])
+        parsed_csv: list[main.Row] = main.parse_csv("example_files/example3.csv", 1, [0])
         expected_parsed_csv: list[main.Row] = [
             {"social security": "", "d.o.b": "", "last name, first name": "Bob, Joe", "employment status": "employed",
              "favorite color": "Teal", "hobbies": "Tennis", "comments": ""},
@@ -67,7 +67,7 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(expected_parsed_csv, parsed_csv)
 
     def test_parse_csv4(self):
-        parsed_csv: list[main.Row] = main.parse_csv("example3.csv", 1, [0, 2, 5])
+        parsed_csv: list[main.Row] = main.parse_csv("example_files/example3.csv", 1, [0, 2, 5])
         expected_parsed_csv: list[main.Row] = [
             {"social security": "1234321", "d.o.b": "", "last name, first name": "Wayne, Emily",
              "employment status": "", "favorite color": "Red", "hobbies": "", "comments": "No comment"},
@@ -81,6 +81,7 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(expected_parsed_csv, parsed_csv)
 
     def test_get_constants_from_file(self):
+        main.CONFIG_FILE_NAME = "example_files/config_example.ini"
         config: configparser.ConfigParser = main.get_config_constants()
         expected_constants: dict = {
             "DEFAULT": {
@@ -113,7 +114,7 @@ class MyTestCase(unittest.TestCase):
             main.get_config_constants()
 
     def test_get_constants_from_stdin(self):  # Give same inputs for the function call and the test inputs
-        main.CONFIG_FILE_NAME = "empty_config.ini"
+        main.CONFIG_FILE_NAME = "example_files/empty_config.ini"
         print("FUNCTION INPUTS")
         print("="*80)
         config: configparser.ConfigParser = main.get_config_constants()
@@ -237,9 +238,9 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(expected_target, target)
 
     def test_everything_together(self):
-        main.CONFIG_FILE_NAME = "config_example.ini"
+        main.CONFIG_FILE_NAME = "example_files/config_example.ini"
         config: configparser.ConfigParser = main.get_config_constants()
-        args = ["example.csv", "example3.csv"]
+        args = ["example_files/example.csv", "example_files/example3.csv"]
         parsed_source: list[main.Row] = main.parse_csv(args[0], config.getint("source", "header_row_num"),
                                                        main.parse_ignored_rows(config["source"]["ignored_rows"]))
         parsed_target: list[main.Row] = main.parse_csv(args[1], config.getint("target", "header_row_num"),
