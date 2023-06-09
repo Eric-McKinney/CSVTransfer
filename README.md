@@ -11,13 +11,16 @@ two different music streaming services. The csvs are formatted differently,
 have different fields, different amounts of data, and different data in general.
 Say that one of the csvs has very thorough listening duration data that you want
 to move to the other file. In this case you would match the data by song name
-and transfer the listening duration column. If this column didn't exist in the
-destination file, then it should be created before running the script.
+since it would be in both files in the same format, and it would be less likely
+to contain duplicate entries. Then you would transfer the listening duration 
+column. If this column didn't exist in the destination file, then it should be
+created before running the script.
 
 ## Setup
-Download `main.py` and `config_template.ini` (I don't have anything fancy set 
-up you have to do it through GitHub lol). Once you've done that, make sure you
-have python installed. After that you should be ready to go.
+Download `main.py`, `config_template.ini`, and optionally this `README.md` for 
+future reference (I don't have anything fancy set up you have to do it 
+through GitHub lol). Once you've done that, make sure you have python 
+installed. After that you should be good to go.
 
 ## Usage
 For this script to be able to see and read the csv files they must be in the
@@ -46,7 +49,6 @@ headers for any number of target columns (separated by a comma and not spaces)
 and only one column to match by.
 
 ### Config File Fields
-The fields are as follows:
 
 **header_row_num**
 > The number of the row (starting at 0) which contains the headers you want to
