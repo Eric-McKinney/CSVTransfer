@@ -5,22 +5,20 @@ import main
 
 class MyTestCase(unittest.TestCase):
     def test_valid_args(self):
-        args1: list[str] = ["example_files/example.csv", "example_files/example2.csv"]
-        args2: list[str] = ["example_files/example2.csv", "example_files/example3.csv"]
-        args3: list[str] = ["example_files/example.csv", "example_files/example.csv"]
+        names1: list[str] = ["example_files/example.csv", "example_files/example2.csv"]
+        names2: list[str] = ["example_files/example2.csv", "example_files/example3.csv"]
+        names3: list[str] = ["example_files/example.csv", "example_files/example.csv"]
 
-        self.assertTrue(main.valid_args(args1))
-        self.assertTrue(main.valid_args(args2))
-        self.assertTrue(main.valid_args(args3))
+        self.assertTrue(main.valid_file_names(names1))
+        self.assertTrue(main.valid_file_names(names2))
+        self.assertTrue(main.valid_file_names(names3))
 
     def test_invalid_args(self):
-        args1: list[str] = ["does_not_exist.file", "example_files/example.csv"]
-        args2: list[str] = ["example_files/example2.csv", "venv"]
-        args3: list[str] = ["example_files/example.csv", "example_files/example2.csv", "example_files/example3.csv"]
+        names1: list[str] = ["does_not_exist.file", "example_files/example.csv"]
+        names2: list[str] = ["example_files/example2.csv", "venv"]
 
-        self.assertFalse(main.valid_args(args1))
-        self.assertFalse(main.valid_args(args2))
-        self.assertFalse(main.valid_args(args3))
+        self.assertFalse(main.valid_file_names(names1))
+        self.assertFalse(main.valid_file_names(names2))
 
     def test_parse_csv(self):
         parsed_csv: list[main.Row] = main.parse_csv("example_files/example.csv", 0, [])
@@ -240,10 +238,11 @@ class MyTestCase(unittest.TestCase):
     def test_everything_together(self):
         main.CONFIG_FILE_NAME = "example_files/config_example.ini"
         config: configparser.ConfigParser = main.get_config_constants()
-        args = ["example_files/example.csv", "example_files/example3.csv"]
-        parsed_source: list[main.Row] = main.parse_csv(args[0], config.getint("source", "header_row_num"),
+        parsed_source: list[main.Row] = main.parse_csv(config["source"]["file_name"],
+                                                       config.getint("source", "header_row_num"),
                                                        main.parse_ignored_rows(config["source"]["ignored_rows"]))
-        parsed_target: list[main.Row] = main.parse_csv(args[1], config.getint("target", "header_row_num"),
+        parsed_target: list[main.Row] = main.parse_csv(config["target"]["file_name"],
+                                                       config.getint("target", "header_row_num"),
                                                        main.parse_ignored_rows(config["target"]["ignored_rows"]))
         main.transfer_data(parsed_source, parsed_target, main.parse_target_columns(config),
                            config["source"]["match_by"], config["target"]["match_by"])
