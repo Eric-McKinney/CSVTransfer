@@ -1,3 +1,5 @@
+__author__ = "Eric McKinney"
+
 """
 Project Description
 
@@ -11,13 +13,11 @@ Usage
 
 First, before running this script make sure that the two csv files you want to operate on are in the same directory as
 this script or in a subdirectory. Then make sure you have a config file even if none of the variables have values. An
-example config file can be seen in config_example.txt. Once you've done that, you can run this script by typing
-"py main.py" in the command prompt or shell (while in the same directory). The source csv file and target csv file for
-data transfer can be specified as command line arguments like this "py main.py SOURCE_FILE TARGET_FILE".
-If not provided as command line arguments, they will be taken via stdin when prompted. Same goes for necessary variables
-in the config file. If they don't have values at runtime then they will be assigned values from stdin when prompted.
-Values entered this way will not be saved to the config file. The name of the config file that this script uses can be
-changed by changing the variable CONFIG_FILE_NAME below.
+example config file can be seen in config_example.ini in the example_files directory in GitHub. Once you have a config, 
+file you can run this script by typing "py main.py" in the command prompt or shell (while in the same directory). 
+If not provided in the config file, necessary values will be taken via stdin when prompted. Values entered this way will
+not be saved to the config file. The name of the config file that this script uses can be changed by changing the 
+variable CONFIG_FILE_NAME below.
 """
 import configparser
 import csv
