@@ -42,10 +42,15 @@ DEBUG: bool = False  # either change this here or use --debug from command line
 HELP_MSG = """
 Usage
 
-py main.py [OPTION] [SOURCE_FILE] [TARGET_FILE]
-\tEnsure that both files are in the same directory as this script or a subdirectory (use relative path). The --debug
-\toption will only work if the source and target files are given as command line arguments as well.
+py main.py [OPTION]
+\tEnsure that both files are in the same directory as this script or a subdirectory (use relative path).
 \tSee README for more extensive detail.
+
+OPTIONS
+\t--debug
+\t\tEnables debug print statements
+\t-h, --help
+\t\tPrints help message and terminates
 """
 
 
@@ -53,28 +58,26 @@ def main(args: list[str] = None):
     if args is None:
         if len(sys.argv) > 1:
             args = sys.argv[1:]
-        else:
-            args = [input("Source file: "), input("Target file: ")]
 
     if "--help" in args or "-h" in args:
         print(HELP_MSG)
         exit(0)
 
     if "--debug" in args:
-        global DEBUG  # I know it's not great to do this, but this is the only place DEBUG is changed
+        global DEBUG  # I'd prefer not to do this, but this is the only time trust
         DEBUG = True
-        args.remove("--debug")
-
-    if not valid_args(args):
-        raise SystemExit("See README for proper usage or use --help")
 
     config: configparser.ConfigParser = get_config_constants()
+
+    if not valid_file_names([config["source"]["file_name"], config["target"]["file_name"]]):
+        raise SystemExit("See README for proper usage or use --help")
+
     print("="*80)
     print("Parsing source...", end="", flush=True)
-    parsed_source: list[Row] = parse_csv(args[0], config.getint("source", "header_row_num"),
+    parsed_source: list[Row] = parse_csv(config["source"]["file_name"], config.getint("source", "header_row_num"),
                                          parse_ignored_rows(config["source"]["ignored_rows"]))
     print("DONE\nParsing target...", end="", flush=True)
-    parsed_target: list[Row] = parse_csv(args[1], config.getint("target", "header_row_num"),
+    parsed_target: list[Row] = parse_csv(config["target"]["file_name"], config.getint("target", "header_row_num"),
                                          parse_ignored_rows(config["target"]["ignored_rows"]))
     print("DONE")
 
@@ -86,30 +89,24 @@ def main(args: list[str] = None):
     print(f"DONE\n\nResults can be found in {config['DEFAULT']['output_file_name']}")
 
 
-def valid_args(args: list[str]) -> bool:
+def valid_file_names(file_names: list[str]) -> bool:
     """
-    Determines if arguments are valid. Arguments should be two file names or relative paths of files that are within the
-    current working directory.
+    Determines if file names in config file are valid. File names should be relative paths of files that are within the
+    current working directory or a subdirectory. (e.g. file_name, ./file_name, ./subdir/file_name).
 
-    :param args: List of command line arguments
+    :param file_names: List of file names from config file
     :return: True if valid, false if not valid
     """
-    if len(args) > 2:
-        print("Too many arguments", file=sys.stderr)
-        return False
-    elif len(args) < 2:
-        print("Too few arguments", file=sys.stderr)
-        return False
 
-    for arg in args:
-        # If the args aren't files (or relative paths) in the current directory then the args are not valid
-        path: str = os.path.join(os.getcwd(), arg)
+    for file in file_names:
+        # If files (or relative paths) aren't in the current directory then they are not valid
+        path: str = os.path.join(os.getcwd(), file)
         path_exists: bool = os.path.exists(path)
         is_file: bool = os.path.isfile(path)
         if not path_exists or not is_file:
-            print(f"\nInvalid arg: '{arg}'", file=sys.stderr)
+            print(f"\nInvalid file name: '{file}'", file=sys.stderr)
             print("" if path_exists else f"{path} does not exist\n", file=sys.stderr, end="")
-            print("" if is_file else f"{arg} is not a file", file=sys.stderr)
+            print("" if is_file else f"{file} is not a file", file=sys.stderr)
             return False
 
     return True
