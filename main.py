@@ -24,13 +24,12 @@ import csv
 import os
 import sys
 
-# TODO: Field validation, specify format (regex)
-# TODO: Move file name to config file
+# TODO: Field validation, specify format (regex) https://docs.python.org/3/library/re.html
 # TODO: Put unmatched things in a separate output file
 
 # Long term
 # TODO: Multiple files cross-referencing (possibly on different fields)
-# TODO: in a config file can specify based on a machine type what files/sources to expect from (ninite, etc.)
+# TODO: in a config file can specify what machine types to expect from what sources (ninite, etc.)
 
 # Custom types for clarity
 Header = str
@@ -39,8 +38,7 @@ Row = dict[Header: Data]
 
 CONFIG_FILE_NAME: str = "config_template.ini"
 DEBUG: bool = False  # either change this here or use --debug from command line
-HELP_MSG = """
-Usage
+HELP_MSG = """USAGE
 
 py main.py [OPTION]
 \tEnsure that both files are in the same directory as this script or a subdirectory (use relative path).
