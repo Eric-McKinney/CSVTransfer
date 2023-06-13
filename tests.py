@@ -1,6 +1,7 @@
 import configparser
 import unittest
 import main
+import sys
 
 
 class MyTestCase(unittest.TestCase):
@@ -85,6 +86,7 @@ class MyTestCase(unittest.TestCase):
             "DEFAULT": {
                 "header_row_num": "0",
                 "ignored_rows": "-1",
+                "unmatched_output_file_name": "",
                 "output_file_name": "output.csv",
                 "output_dialect": "excel"
             },
@@ -112,40 +114,55 @@ class MyTestCase(unittest.TestCase):
             main.get_config_constants()
 
     def test_get_constants_from_stdin(self):  # Give same inputs for the function call and the test inputs
-        main.CONFIG_FILE_NAME = "example_files/empty_config.ini"
-        print("FUNCTION INPUTS")
-        print("="*80)
-        config: configparser.ConfigParser = main.get_config_constants()
-        print("="*80)
+        redirection_file = "test_outputs/constants_to_redirect_to_stdin.txt"
+        with open(redirection_file, "w") as f:
+            for _ in range(2):
+                f.write("out.csv\n")
+                f.write("out_dialect\n")
+                f.write("source_name\n")
+                f.write("1\n")
+                f.write("0\n")
+                f.write("target_col\n")
+                f.write("match\n")
 
-        print("BEGIN TEST INPUTS")
-        print("(Give same inputs as you did for the function otherwise the test will fail)")
-        print("\nNote:\tFor some reason I have yet to figure out, the prompts sometimes don't print until after you "
-              "enter something.\n\t\tIf you provide input and the next prompt doesn't print then just look through the "
-              "code for what should have printed.")
-        print("\t\tI've noticed that it usually happens when I scroll up to see what I put for the function inputs in "
-              "PyCharm IDE.")
-        print("="*80)
+                f.write("target_name\n")
+                f.write("0\n")
+                f.write("1\n")
+                f.write("col_target\n")
+                f.write("by\n")
+
+        temp_stdin = sys.stdin
+        sys.stdin = open(redirection_file)
+        main.CONFIG_FILE_NAME = "example_files/empty_config.ini"
+
+        config: configparser.ConfigParser = main.get_config_constants()
+
         expected_constants: dict = {
             "DEFAULT": {
                 "header_row_num": "",
                 "ignored_rows": "",
-                "output_file_name": input("output_file_name: "),
-                "output_dialect": input("output_dialect: ")
+                "output_file_name": input(),
+                "unmatched_output_file_name": "",
+                "output_dialect": input()
             },
             "source": {
-                "header_row_num": input("source header_row_num: "),
-                "ignored_rows": input("source ignored_rows: "),
-                "target_column(s)": input("source target_column(s): "),
-                "match_by": input("source match_by: ")
+                "file_name": input(),
+                "header_row_num": input(),
+                "ignored_rows": input(),
+                "target_column(s)": input(),
+                "match_by": input()
             },
             "target": {
-                "header_row_num": input("target header_row_num: "),
-                "ignored_rows": input("target ignored_rows: "),
-                "target_column(s)": input("target target_column(s): "),
-                "match_by": input("target match_by: ")
+                "file_name": input(),
+                "header_row_num": input(),
+                "ignored_rows": input(),
+                "target_column(s)": input(),
+                "match_by": input()
             }
         }
+
+        sys.stdin.close()
+        sys.stdin = temp_stdin
 
         for section in expected_constants:
             for key in expected_constants[section]:
@@ -223,8 +240,13 @@ class MyTestCase(unittest.TestCase):
         target_columns: dict[str: str] = {"Rating": "rating"}
         source_match_by: str = "Song"
         target_match_by: str = "song"
+        unmatched_out_name: str = "test_outputs/unmatched_transfer2.csv"
 
-        main.transfer_data(source, target, target_columns, source_match_by, target_match_by)
+        main.transfer_data(source, target, target_columns, source_match_by, target_match_by,
+                           unmatched_output=unmatched_out_name, dialect="excel")
+
+        with open(unmatched_out_name) as f:
+            unmatched_lines: list[str] = f.readlines()
 
         expected_target = [
             {"song": "Alone Infection", "rating": "9/10"},
@@ -233,7 +255,59 @@ class MyTestCase(unittest.TestCase):
             {"song": "505", "rating": "10/10"}
         ]
 
+        expected_unmatched_lines: list[str] = [
+            "Rating,Song\n",
+            "8/10,Power Slam\n",
+            "9/10,Mirror of the World\n",
+            "10/10,Freesia\n",
+            "10/10,Nobody\n"
+        ]
+
         self.assertEqual(expected_target, target)
+        self.assertEqual(expected_unmatched_lines, unmatched_lines)
+
+    def test_transfer_data3(self):
+        source: list[dict] = [
+            {"File Name": "abc.def", "File Format": "def", "File Size": "300kB", "Marked For Deletion": "True"},
+            {"File Name": "important_data.csv", "File Format": "csv", "File Size": "20MB",
+             "Marked For Deletion": "False"},
+            {"File Name": "funny.jpg", "File Format": "jpg", "File Size": "40MB", "Marked For Deletion": "False"},
+            {"File Name": "info.txt", "File Format": "txt", "File Size": "10kB", "Marked For Deletion": "False"},
+            {"File Name": "music.mp3", "File Format": "mp3", "File Size": "400MB", "Marked For Deletion": "False"}
+        ]
+        target: list[dict] = [
+            {"Name": "proj.c", "Size": "89B", "Owner": "npp", "Last Changed": "5/30/23", "Delete?": "n"},
+            {"Name": "funny.jpg", "Size": "500TB", "Owner": "me", "Last Changed": "1/20/23", "Delete?": ""},
+            {"Name": "music.mp3", "Size": "0B", "Owner": "you", "Last Changed": "3/2/03", "Delete?": ""},
+            {"Name": "important_data.csv", "Size": "40GB", "Owner": "root", "Last Changed": "2/2/20", "Delete?": ""},
+            {"Name": "new_file", "Size": "1B", "Owner": "Simon Cowell", "Last Changed": "6/1/23", "Delete?": ""}
+        ]
+        target_columns: dict[str: str] = {"File Size": "Size", "Marked For Deletion": "Delete?"}
+        source_match_by: str = "File Name"
+        target_match_by: str = "Name"
+        unmatched_out_name = "test_outputs/unmatched_transfer3.csv"
+
+        main.transfer_data(source, target, target_columns, source_match_by, target_match_by, unmatched_out_name)
+
+        with open(unmatched_out_name) as f:
+            unmatched_lines: list[str] = f.readlines()
+
+        expected_target: list[dict] = [
+            {"Name": "proj.c", "Size": "89B", "Owner": "npp", "Last Changed": "5/30/23", "Delete?": "n"},
+            {"Name": "funny.jpg", "Size": "40MB", "Owner": "me", "Last Changed": "1/20/23", "Delete?": "False"},
+            {"Name": "music.mp3", "Size": "400MB", "Owner": "you", "Last Changed": "3/2/03", "Delete?": "False"},
+            {"Name": "important_data.csv", "Size": "20MB", "Owner": "root", "Last Changed": "2/2/20",
+             "Delete?": "False"},
+            {"Name": "new_file", "Size": "1B", "Owner": "Simon Cowell", "Last Changed": "6/1/23", "Delete?": ""}
+        ]
+        expected_unmatched_lines: list[str] = [
+            "File Size,Marked For Deletion,File Name\n",
+            "300kB,True,abc.def\n",
+            "10kB,False,info.txt\n"
+        ]
+
+        self.assertEqual(expected_target, target)
+        self.assertEqual(expected_unmatched_lines, unmatched_lines)
 
     def test_everything_together(self):
         main.CONFIG_FILE_NAME = "example_files/config_example.ini"
@@ -257,6 +331,7 @@ class MyTestCase(unittest.TestCase):
                 "header_row_num": "0",
                 "ignored_rows": "-1",
                 "output_file_name": "output.csv",
+                "unmatched_output_file_name": "",
                 "output_dialect": "excel"
             },
             "source": {
