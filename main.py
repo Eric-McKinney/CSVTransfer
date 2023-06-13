@@ -81,7 +81,8 @@ def main(args: list[str] = None):
 
     print("Transferring data...", end="", flush=True)
     transfer_data(parsed_source, parsed_target, parse_target_columns(config), config["source"]["match_by"],
-                  config["target"]["match_by"])
+                  config["target"]["match_by"], unmatched_output=config["DEFAULT"]["unmatched_output_file_name"],
+                  dialect=config["DEFAULT"]["output_dialect"])
     print("DONE\nWriting results to output file...", end="", flush=True)
     write_csv(config["DEFAULT"]["output_file_name"], parsed_target, config["DEFAULT"]["output_dialect"])
     print(f"DONE\n\nResults can be found in {config['DEFAULT']['output_file_name']}")
@@ -217,8 +218,8 @@ def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
     return rows
 
 
-def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str: str],
-                  source_match_by: str, target_match_by: str, unmatched_output: str=None) -> None:
+def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str: str], source_match_by: str,
+                  target_match_by: str, unmatched_output: str = None, dialect: str = "excel") -> None:
     """
     Moves data from target column(s) (keys of target_columns dictionary) in the parsed source file to the target
     column(s) (values of target_columns dictionary) in the parsed target file. This is done for all the values in the
@@ -233,6 +234,7 @@ def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str
     :param target_match_by: Column from target file to align data by
     :param unmatched_output: Name of file to output unmatched values to. If no name is provided, unmatched values will
     not be recorded
+    :param dialect: Dialect to write unmatched output in (same dialect as regular output)
     :return:
     """
     unmatched_data: list[dict] = []
@@ -254,8 +256,12 @@ def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str
 
                 break
 
-        if unmatched_output is not None and not found_match:
-            data: dict = {}
+        if unmatched_output not in [None, ""] and not found_match:
+            data_to_transfer[source_match_by] = data_to_match_by
+            unmatched_data.append(data_to_transfer)
+
+    if unmatched_output not in [None, ""]:
+        write_csv(unmatched_output, unmatched_data, dialect)
 
 
 def write_csv(file_name: str, data: list[Row], dialect: str) -> None:
