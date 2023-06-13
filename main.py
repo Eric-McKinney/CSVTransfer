@@ -140,7 +140,7 @@ def get_config_constants() -> configparser.ConfigParser:
             config["DEFAULT"][key] = input(f"Default {key} missing. Input manually: ")
     for section in ["source", "target"]:
         for key in config[section]:
-            if config[section][key] in [None, ""]:
+            if key != "unmatched_output_file_name" and config[section][key] in [None, ""]:
                 config[section][key] = input(f"{key} missing for {section}. Input manually: ")
 
     return config
