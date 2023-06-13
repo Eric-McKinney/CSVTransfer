@@ -85,6 +85,7 @@ class MyTestCase(unittest.TestCase):
             "DEFAULT": {
                 "header_row_num": "0",
                 "ignored_rows": "-1",
+                "unmatched_output_file_name": "",
                 "output_file_name": "output.csv",
                 "output_dialect": "excel"
             },
@@ -131,6 +132,7 @@ class MyTestCase(unittest.TestCase):
                 "header_row_num": "",
                 "ignored_rows": "",
                 "output_file_name": input("output_file_name: "),
+                "unmatched_output_file_name": input("unmatched_output_file_name: "),
                 "output_dialect": input("output_dialect: ")
             },
             "source": {
@@ -257,6 +259,7 @@ class MyTestCase(unittest.TestCase):
                 "header_row_num": "0",
                 "ignored_rows": "-1",
                 "output_file_name": "output.csv",
+                "unmatched_output_file_name": "",
                 "output_dialect": "excel"
             },
             "source": {
