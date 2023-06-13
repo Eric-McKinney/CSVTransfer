@@ -226,7 +226,11 @@ class MyTestCase(unittest.TestCase):
         source_match_by: str = "Song"
         target_match_by: str = "song"
 
-        main.transfer_data(source, target, target_columns, source_match_by, target_match_by)
+        main.transfer_data(source, target, target_columns, source_match_by, target_match_by,
+                           unmatched_output="test_outputs/unmatched.csv", dialect="excel")
+
+        with open("test_outputs/unmatched.csv") as f:
+            unmatched_lines: list[str] = f.readlines()
 
         expected_target = [
             {"song": "Alone Infection", "rating": "9/10"},
@@ -235,7 +239,59 @@ class MyTestCase(unittest.TestCase):
             {"song": "505", "rating": "10/10"}
         ]
 
+        expected_unmatched_lines: list[str] = [
+            "Rating,Song\n",
+            "8/10,Power Slam\n",
+            "9/10,Mirror of the World\n",
+            "10/10,Freesia\n",
+            "10/10,Nobody\n"
+        ]
+
         self.assertEqual(expected_target, target)
+        self.assertEqual(expected_unmatched_lines, unmatched_lines)
+
+    def test_transfer_data3(self):
+        source: list[dict] = [
+            {"File Name": "abc.def", "File Format": "def", "File Size": "300kB", "Marked For Deletion": "True"},
+            {"File Name": "important_data.csv", "File Format": "csv", "File Size": "20MB",
+             "Marked For Deletion": "False"},
+            {"File Name": "funny.jpg", "File Format": "jpg", "File Size": "40MB", "Marked For Deletion": "False"},
+            {"File Name": "info.txt", "File Format": "txt", "File Size": "10kB", "Marked For Deletion": "False"},
+            {"File Name": "music.mp3", "File Format": "mp3", "File Size": "400MB", "Marked For Deletion": "False"}
+        ]
+        target: list[dict] = [
+            {"Name": "proj.c", "Size": "89B", "Owner": "npp", "Last Changed": "5/30/23", "Delete?": "n"},
+            {"Name": "funny.jpg", "Size": "500TB", "Owner": "me", "Last Changed": "1/20/23", "Delete?": ""},
+            {"Name": "music.mp3", "Size": "0B", "Owner": "you", "Last Changed": "3/2/03", "Delete?": ""},
+            {"Name": "important_data.csv", "Size": "40GB", "Owner": "root", "Last Changed": "2/2/20", "Delete?": ""},
+            {"Name": "new_file", "Size": "1B", "Owner": "Simon Cowell", "Last Changed": "6/1/23", "Delete?": ""}
+        ]
+        target_columns: dict[str: str] = {"File Size": "Size", "Marked For Deletion": "Delete?"}
+        source_match_by: str = "File Name"
+        target_match_by: str = "Name"
+        unmatched_out_name = "test_outputs/unmatched.csv"
+
+        main.transfer_data(source, target, target_columns, source_match_by, target_match_by, unmatched_out_name)
+
+        with open(unmatched_out_name) as f:
+            unmatched_lines: list[str] = f.readlines()
+
+        expected_target: list[dict] = [
+            {"Name": "proj.c", "Size": "89B", "Owner": "npp", "Last Changed": "5/30/23", "Delete?": "n"},
+            {"Name": "funny.jpg", "Size": "40MB", "Owner": "me", "Last Changed": "1/20/23", "Delete?": "False"},
+            {"Name": "music.mp3", "Size": "400MB", "Owner": "you", "Last Changed": "3/2/03", "Delete?": "False"},
+            {"Name": "important_data.csv", "Size": "20MB", "Owner": "root", "Last Changed": "2/2/20",
+             "Delete?": "False"},
+            {"Name": "new_file", "Size": "1B", "Owner": "Simon Cowell", "Last Changed": "6/1/23", "Delete?": ""}
+        ]
+        expected_unmatched_lines: list[str] = [
+            "File Size,Marked For Deletion,File Name\n",
+            "300kB,True,abc.def\n",
+            "10kB,False,info.txt\n"
+        ]
+
+        self.assertEqual(expected_target, target)
+        self.assertEqual(expected_unmatched_lines, unmatched_lines)
 
     def test_everything_together(self):
         main.CONFIG_FILE_NAME = "example_files/config_example.ini"
