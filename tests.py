@@ -2,7 +2,6 @@ import configparser
 import unittest
 import main
 import sys
-import os
 
 
 class MyTestCase(unittest.TestCase):
