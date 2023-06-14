@@ -22,6 +22,7 @@ variable CONFIG_FILE_NAME below.
 import configparser
 import csv
 import os
+import re
 import sys
 
 # TODO: Field validation, specify format (regex) https://docs.python.org/3/library/re.html
@@ -218,13 +219,16 @@ def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
 
 
 def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str: str], source_match_by: str,
-                  target_match_by: str, unmatched_output: str = None, dialect: str = "excel") -> None:
+                  target_match_by: str, unmatched_output: str = None, dialect: str = "excel",
+                  regex: dict[Header: str] = None) -> None:
     """
     Moves data from target column(s) (keys of target_columns dictionary) in the parsed source file to the target
     column(s) (values of target_columns dictionary) in the parsed target file. This is done for all the values in the
     source file from the column specified by source_match_by. If a value in the source file from the column specified
     by source_match_by does not have a matching value in the target file in the corresponding target_match_by column
-    then the data for that value is not transferred.
+    then the data for that value is not transferred. If unmatched_output is given a value, unmatched data will be
+    written to that file. If regex is given, all data from fields present in the dictionary must match the associated
+    regex to be transferred. Data that does not match the regex will count towards the unmatched data.
 
     :param source: Parsed source file
     :param target: Parsed target file
@@ -234,17 +238,23 @@ def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str
     :param unmatched_output: Name of file to output unmatched values to. If no name is provided, unmatched values will
     not be recorded
     :param dialect: Dialect to write unmatched output in (same dialect as regular output)
+    :param regex: Dictionary of fields/headers (keys) and the regex (values) to validate them by
     :return:
     """
     unmatched_data: list[dict] = []
     for row in source:
         data_to_match_by: str = row[source_match_by]
-        data_to_transfer: dict[str: str] = {}
+        data_to_transfer: dict[Header: str] = {}
         found_match: bool = False
 
         # Extract data
         for header in target_columns.keys():
             data_to_transfer[header] = row[header]
+
+        if regex is not None and not data_matches_regex(data_to_transfer, regex):
+            data_to_transfer[source_match_by] = data_to_match_by
+            unmatched_data.append(data_to_transfer)
+            continue
 
         for t_row in target:
             if t_row[target_match_by] == data_to_match_by:
@@ -261,6 +271,21 @@ def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str
 
     if unmatched_output not in [None, ""]:
         write_csv(unmatched_output, unmatched_data, dialect)
+
+
+def data_matches_regex(row: Row, regex: dict[Header: str]) -> bool:
+    """
+    Checks if given row's data matches the given regex for specific fields/headers.
+
+    :param row: Dictionary of headers (keys) and associated data (values) representing one row of a csv
+    :param regex: Dictionary of headers (keys) and associated regex (values) for data to match
+    :return: True if all data matches given regex, false otherwise
+    """
+    for field in regex:
+        if re.search(pattern=regex[field], string=row[field]) is None:
+            return False
+
+    return True
 
 
 def write_csv(file_name: str, data: list[Row], dialect: str) -> None:
