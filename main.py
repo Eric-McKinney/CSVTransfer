@@ -14,10 +14,10 @@ Usage
 First, before running this script make sure that the two csv files you want to operate on are in the same directory as
 this script or in a subdirectory. Then make sure you have a config file even if none of the variables have values. An
 example config file can be seen in config_example.ini in the example_files directory in GitHub. Once you have a config, 
-file you can run this script by typing "py main.py" in the command prompt or shell (while in the same directory). 
-If not provided in the config file, necessary values will be taken via stdin when prompted. Values entered this way will
-not be saved to the config file. The name of the config file that this script uses can be changed by changing the 
-variable CONFIG_FILE_NAME below.
+file you can run this script by typing "py main.py" or "python3 main.py" in the command prompt or shell (while in the 
+same directory). If not provided in the config file, necessary values will be taken via stdin when prompted. Values 
+entered this way will not be saved to the config file. The name of the config file that this script uses can be changed 
+by changing the variable CONFIG_FILE_NAME below.
 """
 import configparser
 import csv
@@ -25,7 +25,7 @@ import os
 import re
 import sys
 
-# TODO: Field validation, specify format (regex) https://docs.python.org/3/library/re.html
+# TODO: Update documentation
 
 # Long term
 # TODO: Multiple files cross-referencing (possibly on different fields)
@@ -41,6 +41,7 @@ DEBUG: bool = False  # either change this here or use --debug from command line
 HELP_MSG = """USAGE
 
 py main.py [OPTION]
+python3 main.py [OPTION]
 \tEnsure that both files are in the same directory as this script or a subdirectory (use relative path).
 \tSee README for more extensive detail.
 
@@ -128,7 +129,7 @@ def get_config_constants() -> configparser.ConfigParser:
     config = configparser.ConfigParser(allow_no_value=True)
     config.read(CONFIG_FILE_NAME)
 
-    # Set header_row_num and ignored_rows to defaults if not set (configparser does this but for all sections, but
+    # Set header_row_num and ignored_rows to defaults if not set (configparser does this but for all sections, and
     # I don't want that)
     for section in ["source", "target"]:
         for key in ["header_row_num", "ignored_rows"]:
@@ -274,19 +275,20 @@ def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str
         write_csv(unmatched_output, unmatched_data, dialect)
 
 
-def data_matches_regex(row: Row, regex: dict[Header: str]) -> bool:
+def data_matches_regex(data: dict[Header: str], regex: dict[Header: str]) -> bool:
     """
-    Checks if given row's data matches the given regex for specific fields/headers.
+    Checks if given row's data that is being transferred matches the given regex for specific fields/headers. If a regex
+    appears that refers to data not being transferred, it will be ignored.
 
-    :param row: Dictionary of headers (keys) and associated data (values) representing one row of a csv
+    :param data: Dictionary of headers (keys) and associated data (values)
     :param regex: Dictionary of headers (keys) and associated regex (values) for data to match
     :return: True if all data matches given regex, false otherwise
     """
     for field in regex:
-        if field not in row.keys():
+        if field not in data.keys():
             continue
 
-        if re.search(pattern=regex[field], string=row[field]) is None:
+        if re.search(pattern=regex[field], string=data[field]) is None:
             return False
 
     return True
