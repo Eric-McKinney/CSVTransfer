@@ -31,7 +31,7 @@ import sys
 # TODO: Multiple files cross-referencing (possibly on different fields)
 # TODO: in a config file can specify what machine types to expect from what sources (ninite, etc.)
 
-# Custom types for clarity
+# Custom type aliases for clarity
 Header = str
 Data = str
 Row = dict[Header: Data]
