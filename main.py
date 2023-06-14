@@ -136,13 +136,13 @@ def get_config_constants() -> configparser.ConfigParser:
                 config[section][key] = config["defaults"][key]
 
     # Collect missing variables via stdin
-    for key in ["output_file_name", "output_dialect"]:
-        if config["output"][key] in [None, ""]:
-            config["output"][key] = input(f"Default {key} missing. Input manually: ")
     for section in ["source", "target"]:
         for key in config[section]:
             if config[section][key] in [None, ""]:
                 config[section][key] = input(f"{key} missing for {section}. Input manually: ")
+    for key in ["output_file_name", "output_dialect"]:
+        if config["output"][key] in [None, ""]:
+            config["output"][key] = input(f"Output {key} missing. Input manually: ")
 
     return config
 
