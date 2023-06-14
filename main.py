@@ -81,11 +81,11 @@ def main(args: list[str] = None):
 
     print("Transferring data...", end="", flush=True)
     transfer_data(parsed_source, parsed_target, parse_target_columns(config), config["source"]["match_by"],
-                  config["target"]["match_by"], unmatched_output=config["DEFAULT"]["unmatched_output_file_name"],
-                  dialect=config["DEFAULT"]["output_dialect"])
+                  config["target"]["match_by"], unmatched_output=config["output"]["unmatched_file_name"],
+                  dialect=config["output"]["dialect"])
     print("DONE\nWriting results to output file...", end="", flush=True)
-    write_csv(config["DEFAULT"]["output_file_name"], parsed_target, config["DEFAULT"]["output_dialect"])
-    print(f"DONE\n\nResults can be found in {config['DEFAULT']['output_file_name']}")
+    write_csv(config["output"]["file_name"], parsed_target, config["output"]["dialect"])
+    print(f"DONE\n\nResults can be found in {config['output']['file_name']}")
 
 
 def valid_file_names(file_names: list[str]) -> bool:
@@ -140,7 +140,7 @@ def get_config_constants() -> configparser.ConfigParser:
         for key in config[section]:
             if config[section][key] in [None, ""]:
                 config[section][key] = input(f"{key} missing for {section}. Input manually: ")
-    for key in ["output_file_name", "output_dialect"]:
+    for key in ["file_name", "dialect"]:
         if config["output"][key] in [None, ""]:
             config["output"][key] = input(f"Output {key} missing. Input manually: ")
 
@@ -283,6 +283,9 @@ def data_matches_regex(row: Row, regex: dict[Header: str]) -> bool:
     :return: True if all data matches given regex, false otherwise
     """
     for field in regex:
+        if field not in row.keys():
+            continue
+
         if re.search(pattern=regex[field], string=row[field]) is None:
             return False
 
