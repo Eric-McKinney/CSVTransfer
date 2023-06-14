@@ -128,19 +128,20 @@ def get_config_constants() -> configparser.ConfigParser:
     config = configparser.ConfigParser(allow_no_value=True)
     config.read(CONFIG_FILE_NAME)
 
-    # Set header_row_num and ignored_rows to defaults if not set (bc apparently configparser doesn't do this)
+    # Set header_row_num and ignored_rows to defaults if not set (configparser does this but for all sections, but
+    # I don't want that)
     for section in ["source", "target"]:
         for key in ["header_row_num", "ignored_rows"]:
-            if config[section][key] in [None, ""] and config["DEFAULT"][key] not in [None, ""]:
-                config[section][key] = config["DEFAULT"][key]
+            if config[section][key] in [None, ""] and config["defaults"][key] not in [None, ""]:
+                config[section][key] = config["defaults"][key]
 
     # Collect missing variables via stdin
     for key in ["output_file_name", "output_dialect"]:
-        if config["DEFAULT"][key] in [None, ""]:
-            config["DEFAULT"][key] = input(f"Default {key} missing. Input manually: ")
+        if config["output"][key] in [None, ""]:
+            config["output"][key] = input(f"Default {key} missing. Input manually: ")
     for section in ["source", "target"]:
         for key in config[section]:
-            if key != "unmatched_output_file_name" and config[section][key] in [None, ""]:
+            if config[section][key] in [None, ""]:
                 config[section][key] = input(f"{key} missing for {section}. Input manually: ")
 
     return config
