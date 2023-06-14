@@ -25,7 +25,6 @@ import os
 import sys
 
 # TODO: Field validation, specify format (regex) https://docs.python.org/3/library/re.html
-# TODO: Put unmatched things in a separate output file
 
 # Long term
 # TODO: Multiple files cross-referencing (possibly on different fields)
