@@ -101,7 +101,8 @@ class MyTestCase(unittest.TestCase):
                 "ignored_rows": "0,5",
                 "target_column(s)": "favorite color",
                 "match_by": "social security"
-            }
+            },
+            "fields": {}
         }
 
         for section in expected_constants:
@@ -345,7 +346,8 @@ class MyTestCase(unittest.TestCase):
                 "ignored_rows": "0,5",
                 "target_column(s)": "favorite color",
                 "match_by": "social security"
-            }
+            },
+            "fields": {}
         }
 
         expected_lines = [
