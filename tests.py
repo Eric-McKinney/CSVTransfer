@@ -5,7 +5,7 @@ import sys
 
 
 class MyTestCase(unittest.TestCase):
-    def test_valid_args(self):
+    def test_valid_file_names(self):
         names1: list[str] = ["example_files/example.csv", "example_files/example2.csv"]
         names2: list[str] = ["example_files/example2.csv", "example_files/example3.csv"]
         names3: list[str] = ["example_files/example.csv", "example_files/example.csv"]
@@ -14,7 +14,7 @@ class MyTestCase(unittest.TestCase):
         self.assertTrue(main.valid_file_names(names2))
         self.assertTrue(main.valid_file_names(names3))
 
-    def test_invalid_args(self):
+    def test_invalid_file_names(self):
         names1: list[str] = ["does_not_exist.file", "example_files/example.csv"]
         names2: list[str] = ["example_files/example2.csv", "venv"]
 
