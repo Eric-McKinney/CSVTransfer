@@ -25,8 +25,6 @@ import os
 import re
 import sys
 
-# TODO: Update documentation
-
 # Long term
 # TODO: Multiple files cross-referencing (possibly on different fields)
 # TODO: in a config file can specify what machine types to expect from what sources (ninite, etc.)
