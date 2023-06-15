@@ -25,9 +25,12 @@ import os
 import re
 import sys
 
-# Long term
-# TODO: Multiple files cross-referencing (possibly on different fields)
-# TODO: in a config file can specify what machine types to expect from what sources (ninite, etc.)
+# TODO: Shift to more of a CSVMerge than transfer (pull from multiple sources and output a new file)
+#       in this sense, be able to choose relevant fields. Also show in output what sources data appears in and maybe
+#       the discrepancies between sources
+# TODO: Determine how to prioritize information across sources, handle collisions, etc.
+# TODO: Add "rules" which data can be flagged by (e.g. only devices of this type should appear here)
+# TODO: For unmatched data show the source it's from
 
 # Custom type aliases for clarity
 Header = str
