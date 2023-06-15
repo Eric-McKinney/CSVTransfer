@@ -14,23 +14,24 @@ Usage
 First, before running this script make sure that the two csv files you want to operate on are in the same directory as
 this script or in a subdirectory. Then make sure you have a config file even if none of the variables have values. An
 example config file can be seen in config_example.ini in the example_files directory in GitHub. Once you have a config, 
-file you can run this script by typing "py main.py" in the command prompt or shell (while in the same directory). 
-If not provided in the config file, necessary values will be taken via stdin when prompted. Values entered this way will
-not be saved to the config file. The name of the config file that this script uses can be changed by changing the 
-variable CONFIG_FILE_NAME below.
+file you can run this script by typing "py main.py" or "python3 main.py" in the command prompt or shell (while in the 
+same directory). If not provided in the config file, necessary values will be taken via stdin when prompted. Values 
+entered this way will not be saved to the config file. The name of the config file that this script uses can be changed 
+by changing the variable CONFIG_FILE_NAME below.
 """
 import configparser
 import csv
 import os
+import re
 import sys
 
-# TODO: Field validation, specify format (regex) https://docs.python.org/3/library/re.html
+# TODO: Update documentation
 
 # Long term
 # TODO: Multiple files cross-referencing (possibly on different fields)
 # TODO: in a config file can specify what machine types to expect from what sources (ninite, etc.)
 
-# Custom types for clarity
+# Custom type aliases for clarity
 Header = str
 Data = str
 Row = dict[Header: Data]
@@ -40,6 +41,7 @@ DEBUG: bool = False  # either change this here or use --debug from command line
 HELP_MSG = """USAGE
 
 py main.py [OPTION]
+python3 main.py [OPTION]
 \tEnsure that both files are in the same directory as this script or a subdirectory (use relative path).
 \tSee README for more extensive detail.
 
@@ -80,11 +82,11 @@ def main(args: list[str] = None):
 
     print("Transferring data...", end="", flush=True)
     transfer_data(parsed_source, parsed_target, parse_target_columns(config), config["source"]["match_by"],
-                  config["target"]["match_by"], unmatched_output=config["DEFAULT"]["unmatched_output_file_name"],
-                  dialect=config["DEFAULT"]["output_dialect"])
+                  config["target"]["match_by"], unmatched_output=config["output"]["unmatched_file_name"],
+                  dialect=config["output"]["dialect"])
     print("DONE\nWriting results to output file...", end="", flush=True)
-    write_csv(config["DEFAULT"]["output_file_name"], parsed_target, config["DEFAULT"]["output_dialect"])
-    print(f"DONE\n\nResults can be found in {config['DEFAULT']['output_file_name']}")
+    write_csv(config["output"]["file_name"], parsed_target, config["output"]["dialect"])
+    print(f"DONE\n\nResults can be found in {config['output']['file_name']}")
 
 
 def valid_file_names(file_names: list[str]) -> bool:
@@ -127,20 +129,21 @@ def get_config_constants() -> configparser.ConfigParser:
     config = configparser.ConfigParser(allow_no_value=True)
     config.read(CONFIG_FILE_NAME)
 
-    # Set header_row_num and ignored_rows to defaults if not set (bc apparently configparser doesn't do this)
+    # Set header_row_num and ignored_rows to defaults if not set (configparser does this but for all sections, and
+    # I don't want that)
     for section in ["source", "target"]:
         for key in ["header_row_num", "ignored_rows"]:
-            if config[section][key] in [None, ""] and config["DEFAULT"][key] not in [None, ""]:
-                config[section][key] = config["DEFAULT"][key]
+            if config[section][key] in [None, ""] and config["defaults"][key] not in [None, ""]:
+                config[section][key] = config["defaults"][key]
 
     # Collect missing variables via stdin
-    for key in ["output_file_name", "output_dialect"]:
-        if config["DEFAULT"][key] in [None, ""]:
-            config["DEFAULT"][key] = input(f"Default {key} missing. Input manually: ")
     for section in ["source", "target"]:
         for key in config[section]:
-            if key != "unmatched_output_file_name" and config[section][key] in [None, ""]:
+            if config[section][key] in [None, ""]:
                 config[section][key] = input(f"{key} missing for {section}. Input manually: ")
+    for key in ["file_name", "dialect"]:
+        if config["output"][key] in [None, ""]:
+            config["output"][key] = input(f"Output {key} missing. Input manually: ")
 
     return config
 
@@ -218,13 +221,16 @@ def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
 
 
 def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str: str], source_match_by: str,
-                  target_match_by: str, unmatched_output: str = None, dialect: str = "excel") -> None:
+                  target_match_by: str, unmatched_output: str = None, dialect: str = "excel",
+                  regex: dict[Header: str] = None) -> None:
     """
     Moves data from target column(s) (keys of target_columns dictionary) in the parsed source file to the target
     column(s) (values of target_columns dictionary) in the parsed target file. This is done for all the values in the
     source file from the column specified by source_match_by. If a value in the source file from the column specified
     by source_match_by does not have a matching value in the target file in the corresponding target_match_by column
-    then the data for that value is not transferred.
+    then the data for that value is not transferred. If unmatched_output is given a value, unmatched data will be
+    written to that file. If regex is given, all data from fields present in the dictionary must match the associated
+    regex to be transferred. Data that does not match the regex will count towards the unmatched data.
 
     :param source: Parsed source file
     :param target: Parsed target file
@@ -234,17 +240,23 @@ def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str
     :param unmatched_output: Name of file to output unmatched values to. If no name is provided, unmatched values will
     not be recorded
     :param dialect: Dialect to write unmatched output in (same dialect as regular output)
+    :param regex: Dictionary of fields/headers (keys) and the regex (values) to validate them by
     :return:
     """
     unmatched_data: list[dict] = []
     for row in source:
         data_to_match_by: str = row[source_match_by]
-        data_to_transfer: dict[str: str] = {}
+        data_to_transfer: dict[Header: str] = {}
         found_match: bool = False
 
         # Extract data
         for header in target_columns.keys():
             data_to_transfer[header] = row[header]
+
+        if regex is not None and not data_matches_regex(data_to_transfer, regex):
+            data_to_transfer[source_match_by] = data_to_match_by
+            unmatched_data.append(data_to_transfer)
+            continue
 
         for t_row in target:
             if t_row[target_match_by] == data_to_match_by:
@@ -261,6 +273,25 @@ def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str
 
     if unmatched_output not in [None, ""]:
         write_csv(unmatched_output, unmatched_data, dialect)
+
+
+def data_matches_regex(data: dict[Header: str], regex: dict[Header: str]) -> bool:
+    """
+    Checks if given row's data that is being transferred matches the given regex for specific fields/headers. If a regex
+    appears that refers to data not being transferred, it will be ignored.
+
+    :param data: Dictionary of headers (keys) and associated data (values)
+    :param regex: Dictionary of headers (keys) and associated regex (values) for data to match
+    :return: True if all data matches given regex, false otherwise
+    """
+    for field in regex:
+        if field not in data.keys():
+            continue
+
+        if re.search(pattern=regex[field], string=data[field]) is None:
+            return False
+
+    return True
 
 
 def write_csv(file_name: str, data: list[Row], dialect: str) -> None:

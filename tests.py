@@ -5,7 +5,7 @@ import sys
 
 
 class MyTestCase(unittest.TestCase):
-    def test_valid_args(self):
+    def test_valid_file_names(self):
         names1: list[str] = ["example_files/example.csv", "example_files/example2.csv"]
         names2: list[str] = ["example_files/example2.csv", "example_files/example3.csv"]
         names3: list[str] = ["example_files/example.csv", "example_files/example.csv"]
@@ -14,7 +14,7 @@ class MyTestCase(unittest.TestCase):
         self.assertTrue(main.valid_file_names(names2))
         self.assertTrue(main.valid_file_names(names3))
 
-    def test_invalid_args(self):
+    def test_invalid_file_names(self):
         names1: list[str] = ["does_not_exist.file", "example_files/example.csv"]
         names2: list[str] = ["example_files/example2.csv", "venv"]
 
@@ -48,19 +48,15 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(expected_parsed_csv, parsed_csv)
 
     def test_parse_csv3(self):
-        parsed_csv: list[main.Row] = main.parse_csv("example_files/example3.csv", 1, [0])
+        parsed_csv: list[main.Row] = main.parse_csv("example_files/example3.csv", 1, [0, 6, 5])
         expected_parsed_csv: list[main.Row] = [
             {"social security": "", "d.o.b": "", "last name, first name": "Bob, Joe", "employment status": "employed",
              "favorite color": "Teal", "hobbies": "Tennis", "comments": ""},
-            {"social security": "1234321", "d.o.b": "", "last name, first name": "Wayne, Emily",
+            {"social security": "1234321", "d.o.b": "5/31/2000", "last name, first name": "Wayne, Emily",
              "employment status": "", "favorite color": "Red", "hobbies": "", "comments": "No comment"},
             {"social security": "234111", "d.o.b": "1/1/1970", "last name, first name": "Last, First",
-             "employment status": "", "favorite color": "Green", "hobbies": "Deliberate misinformation",
-             "comments": "Mr. Unix Epoch"},
-            {"social security": "", "d.o.b": "", "last name, first name": "", "employment status": "",
-             "favorite color": "", "hobbies": "", "comments": ""},
-            {"social security": "565", "d.o.b": "", "last name, first name": "", "employment status": "employed",
-             "favorite color": "Royal purple", "hobbies": "No hobby", "comments": ""}
+             "employment status": "employed", "favorite color": "Magenta", "hobbies": "Deliberate misinformation",
+             "comments": "Mr. Unix Epoch"}
         ]
 
         self.assertEqual(expected_parsed_csv, parsed_csv)
@@ -68,10 +64,10 @@ class MyTestCase(unittest.TestCase):
     def test_parse_csv4(self):
         parsed_csv: list[main.Row] = main.parse_csv("example_files/example3.csv", 1, [0, 2, 5])
         expected_parsed_csv: list[main.Row] = [
-            {"social security": "1234321", "d.o.b": "", "last name, first name": "Wayne, Emily",
+            {"social security": "1234321", "d.o.b": "5/31/2000", "last name, first name": "Wayne, Emily",
              "employment status": "", "favorite color": "Red", "hobbies": "", "comments": "No comment"},
             {"social security": "234111", "d.o.b": "1/1/1970", "last name, first name": "Last, First",
-             "employment status": "", "favorite color": "Green", "hobbies": "Deliberate misinformation",
+             "employment status": "employed", "favorite color": "Magenta", "hobbies": "Deliberate misinformation",
              "comments": "Mr. Unix Epoch"},
             {"social security": "565", "d.o.b": "", "last name, first name": "", "employment status": "employed",
              "favorite color": "Royal purple", "hobbies": "No hobby", "comments": ""}
@@ -83,30 +79,33 @@ class MyTestCase(unittest.TestCase):
         main.CONFIG_FILE_NAME = "example_files/config_example.ini"
         config: configparser.ConfigParser = main.get_config_constants()
         expected_constants: dict = {
-            "DEFAULT": {
+            "defaults": {
                 "header_row_num": "0",
-                "ignored_rows": "-1",
-                "unmatched_output_file_name": "",
-                "output_file_name": "output.csv",
-                "output_dialect": "excel"
+                "ignored_rows": "-1"
             },
             "source": {
-                "header_row_num": "0",
-                "ignored_rows": "-1",
+                "file_name": "example_files/example.csv",
                 "target_column(s)": "Favorite Color",
-                "match_by": "Social Security Number"
+                "match_by": "Social Security Number",
+                "header_row_num": "0",
+                "ignored_rows": "-1"
             },
             "target": {
-                "header_row_num": "1",
-                "ignored_rows": "0,5",
+                "file_name": "example_files/example3.csv",
                 "target_column(s)": "favorite color",
-                "match_by": "social security"
-            }
+                "match_by": "social security",
+                "header_row_num": "1",
+                "ignored_rows": "0,5"
+            },
+            "output": {
+                "file_name": "output.csv",
+                "unmatched_file_name": "",
+                "dialect": "excel"
+            },
+            "fields": {}
         }
 
-        for section in expected_constants:
-            for key in expected_constants[section]:
-                self.assertEqual(expected_constants[section][key], config[section][key])
+        self.assertConfigEquals(expected_constants, config)
 
     def test_get_constants_from_nonexistent_file(self):
         main.CONFIG_FILE_NAME = "does_not_exist_for_test_to_work.ini"
@@ -117,19 +116,20 @@ class MyTestCase(unittest.TestCase):
         redirection_file = "test_outputs/constants_to_redirect_to_stdin.txt"
         with open(redirection_file, "w") as f:
             for _ in range(2):
-                f.write("out.csv\n")
-                f.write("out_dialect\n")
                 f.write("source_name\n")
-                f.write("1\n")
-                f.write("0\n")
                 f.write("target_col\n")
                 f.write("match\n")
+                f.write("1\n")
+                f.write("0\n")
 
                 f.write("target_name\n")
-                f.write("0\n")
-                f.write("1\n")
                 f.write("col_target\n")
                 f.write("by\n")
+                f.write("0\n")
+                f.write("1\n")
+
+                f.write("out.csv\n")
+                f.write("out_dialect\n")
 
         temp_stdin = sys.stdin
         sys.stdin = open(redirection_file)
@@ -138,35 +138,36 @@ class MyTestCase(unittest.TestCase):
         config: configparser.ConfigParser = main.get_config_constants()
 
         expected_constants: dict = {
-            "DEFAULT": {
+            "defaults": {
                 "header_row_num": "",
-                "ignored_rows": "",
-                "output_file_name": input(),
-                "unmatched_output_file_name": "",
-                "output_dialect": input()
+                "ignored_rows": ""
             },
             "source": {
                 "file_name": input(),
-                "header_row_num": input(),
-                "ignored_rows": input(),
                 "target_column(s)": input(),
-                "match_by": input()
+                "match_by": input(),
+                "header_row_num": input(),
+                "ignored_rows": input()
             },
             "target": {
                 "file_name": input(),
-                "header_row_num": input(),
-                "ignored_rows": input(),
                 "target_column(s)": input(),
-                "match_by": input()
-            }
+                "match_by": input(),
+                "header_row_num": input(),
+                "ignored_rows": input()
+            },
+            "output": {
+                "file_name": input(),
+                "unmatched_file_name": "",
+                "dialect": input()
+            },
+            "fields": {}
         }
 
         sys.stdin.close()
         sys.stdin = temp_stdin
 
-        for section in expected_constants:
-            for key in expected_constants[section]:
-                self.assertEqual(expected_constants[section][key], config[section][key])
+        self.assertConfigEquals(expected_constants, config)
 
     def test_write_to_csv(self):
         sample_data: list[main.Row] = [
@@ -320,46 +321,127 @@ class MyTestCase(unittest.TestCase):
                                                        main.parse_ignored_rows(config["target"]["ignored_rows"]))
         main.transfer_data(parsed_source, parsed_target, main.parse_target_columns(config),
                            config["source"]["match_by"], config["target"]["match_by"])
-        main.write_csv(f'test_outputs/{config["DEFAULT"]["output_file_name"]}', parsed_target,
-                       config["DEFAULT"]["output_dialect"])
+        main.write_csv(f'test_outputs/{config["output"]["file_name"]}', parsed_target,
+                       config["output"]["dialect"])
 
-        with open(f'test_outputs/{config["DEFAULT"]["output_file_name"]}') as f:
+        with open(f'test_outputs/{config["output"]["file_name"]}') as f:
             lines = f.readlines()
 
         expected_constants = {
-            "DEFAULT": {
+            "defaults": {
                 "header_row_num": "0",
-                "ignored_rows": "-1",
-                "output_file_name": "output.csv",
-                "unmatched_output_file_name": "",
-                "output_dialect": "excel"
+                "ignored_rows": "-1"
             },
             "source": {
-                "header_row_num": "0",
-                "ignored_rows": "-1",
+                "file_name": "example_files/example.csv",
                 "target_column(s)": "Favorite Color",
-                "match_by": "Social Security Number"
+                "match_by": "Social Security Number",
+                "header_row_num": "0",
+                "ignored_rows": "-1"
             },
             "target": {
-                "header_row_num": "1",
-                "ignored_rows": "0,5",
+                "file_name": "example_files/example3.csv",
                 "target_column(s)": "favorite color",
-                "match_by": "social security"
-            }
+                "match_by": "social security",
+                "header_row_num": "1",
+                "ignored_rows": "0,5"
+            },
+            "output": {
+                "file_name": "output.csv",
+                "unmatched_file_name": "",
+                "dialect": "excel"
+            },
+            "fields": {}
         }
 
         expected_lines = [
             "social security,d.o.b,\"last name, first name\",employment status,favorite color,hobbies,comments\n",
             ",,\"Bob, Joe\",employed,Teal,Tennis,\n",
-            "1234321,,\"Wayne, Emily\",,Yellow,,No comment\n",
-            "234111,1/1/1970,\"Last, First\",,Green,Deliberate misinformation,Mr. Unix Epoch\n",
+            "1234321,5/31/2000,\"Wayne, Emily\",,Yellow,,No comment\n",
+            "234111,1/1/1970,\"Last, First\",employed,Green,Deliberate misinformation,Mr. Unix Epoch\n",
             "565,,,employed,Royal purple,No hobby,\n"
         ]
 
         self.assertEqual(expected_lines, lines)
-        for section in expected_constants:
-            for key in expected_constants[section]:
-                self.assertEqual(expected_constants[section][key], config[section][key])
+        self.assertConfigEquals(expected_constants, config)
+
+    def test_everything_together2(self):
+        main.CONFIG_FILE_NAME = "example_files/config_example2.ini"
+        config: configparser.ConfigParser = main.get_config_constants()
+        parsed_source: list[main.Row] = main.parse_csv(config["source"]["file_name"],
+                                                       config.getint("source", "header_row_num"),
+                                                       main.parse_ignored_rows(config["source"]["ignored_rows"]))
+        parsed_target: list[main.Row] = main.parse_csv(config["target"]["file_name"],
+                                                       config.getint("target", "header_row_num"),
+                                                       main.parse_ignored_rows(config["target"]["ignored_rows"]))
+        main.transfer_data(parsed_source, parsed_target, main.parse_target_columns(config),
+                           config["source"]["match_by"], config["target"]["match_by"],
+                           f'test_outputs/{config["output"]["unmatched_file_name"]}', config["output"]["dialect"],
+                           config["fields"])
+        main.write_csv(f'test_outputs/{config["output"]["file_name"]}', parsed_target,
+                       config["output"]["dialect"])
+
+        with open(f'test_outputs/{config["output"]["file_name"]}') as f:
+            lines = f.readlines()
+
+        with open(f'test_outputs/{config["output"]["unmatched_file_name"]}') as f:
+            unmatched_lines = f.readlines()
+
+        expected_constants = {
+            "defaults": {
+                "header_row_num": "0",
+                "ignored_rows": "-1"
+            },
+            "source": {
+                "file_name": "example_files/example3.csv",
+                "target_column(s)": "employment status,favorite color",
+                "match_by": "social security",
+                "header_row_num": "1",
+                "ignored_rows": "0,6,5"
+            },
+            "target": {
+                "file_name": "example_files/example.csv",
+                "target_column(s)": "Employment Status,Favorite Color",
+                "match_by": "Social Security Number",
+                "header_row_num": "0",
+                "ignored_rows": "-1"
+            },
+            "output": {
+                "file_name": "output2.csv",
+                "unmatched_file_name": "unmatched2.csv",
+                "dialect": "unix"
+            },
+            "fields": {
+                "employment status": r"^(([eE]|[uU]ne)mployed)$",
+                "social security": r"^\d+$"
+            }
+        }
+
+        expected_lines = [
+            '"Name","Date of birth","Social Security Number","Employment Status","Favorite Color"\n',
+            '"John Smith","3/24/1989","123456","Employed","Red"\n',
+            '"Joe Bob","1/23/4567","987654321","Unemployed","Orange"\n',
+            '"Emily Wayne","5/31/2000","1234321","Unknown","Yellow"\n',
+            '"First Last","1/1/1970","234111","employed","Magenta"\n'
+        ]
+
+        expected_unmatched_lines = [
+            '"employment status","favorite color","social security"\n',
+            '"employed","Teal",""\n',
+            '"","Red","1234321"\n',
+        ]
+
+        self.assertEqual(expected_lines, lines)
+        self.assertEqual(expected_unmatched_lines, unmatched_lines)
+        self.assertConfigEquals(expected_constants, config)
+
+    def assertConfigEquals(self, expected_config: dict[str: dict[str: str]], config: configparser.ConfigParser):
+        self.assertEqual(len(expected_config.keys()), len(config.sections()))
+
+        for section in expected_config.keys():
+            self.assertEqual(len(expected_config[section].keys()), len(config[section].keys()))
+            for key in expected_config[section].keys():
+                self.assertEqual(expected_config[section][key], config[section][key])
 
 
 if __name__ == '__main__':
