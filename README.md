@@ -64,9 +64,9 @@ be validated against via regex. This is entirely optional. Data that does not
 match the given regex for a given header will not be transferred and counts
 towards the unmatched data.
 
-### Config File Fields
+## Config File Fields
 
-### defaults
+### defaults section
 **header_row_num**
 > The number of the row (starting at 0) which contains the headers you want to
 use.
@@ -74,8 +74,10 @@ use.
 **ignored_rows**
 > A comma separated list of numbers of rows to ignore while parsing, 
 transferring data, and putting data in the output file. Any negative value or
-out of bounds value effectively means nothing. The order of the numbers does
-not matter. Data ignored this way does not contribute to the unmatched data.
+out of bounds value effectively means nothing. In the template this value is
+defaulted to -1 (which is a filler value), so no rows are ignored. The order 
+of the numbers does not matter. Data ignored this way does not contribute to 
+the unmatched data.
 
 ### source & target sections
 **file_name**
@@ -121,7 +123,7 @@ info can be found [here](https://docs.python.org/3/library/csv.html#csv.excel).
 ### fields section
 > Optionally put regex to match fields by. To see what types of regex syntax
 are supported, see the
-[standard python regex library documentation](https://docs.python.org/3/library/re.html).
+[python regex library documentation](https://docs.python.org/3/library/re.html).
 
 Example:
 ```ini
