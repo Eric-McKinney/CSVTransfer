@@ -79,6 +79,7 @@ defaulted to -1 (which is a filler value), so no rows are ignored. The order
 of the numbers does not matter. Data ignored this way does not contribute to 
 the unmatched data.
 
+---
 ### source & target sections
 **file_name**
 > Name of the file to use. Can be a relative path to a file in a subdirectory.
@@ -104,6 +105,7 @@ override the value given in defaults.
 **ignored_rows**
 > See above.
 
+---
 ### output section
 **file_name**
 > The name of the output file. If this collides with a file in the same 
@@ -120,6 +122,7 @@ excel, and excel_tab. The default and the one you probably want is excel. The
 dialect only determines things like what to quote, line terminator, etc. More
 info can be found [here](https://docs.python.org/3/library/csv.html#csv.excel).
 
+---
 ### fields section
 > Optionally put regex to match fields by. To see what types of regex syntax
 are supported, see the
@@ -131,6 +134,7 @@ Example:
 IPv4 address = ^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$
 ```
 
+---
 ### Example Config File
 [config_example.ini](example_files/config_example.ini) (more in
 [example_files/](example_files))
