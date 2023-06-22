@@ -50,19 +50,19 @@ prompted when you run `main.py` for the variables that are necessary for
 the script to do what it needs to do, and they will be taken via stdin. Values
 taken this way will not be written to the config file.
 
-The config file has five sections: defaults, source, target, output, and fields. 
-The defaults section contains default values for the source and target sections. 
-These are filled out for you in the template. The source and target sections are
-to further specify information about the two csv files that will be a part of the
-data transfer. Everything in these sections need values except the things that
-appear in the defaults section. The output section is mostly just to name the
-output file, but you can also change the dialect to write output csvs in. Excel
-is the default and is what I would recommend. More about dialects below. You can
-also optionally give the name for a file to dump data that could not be matched.
-Finally, the fields section is a place where you can specify formats for data to
-be validated against via regex. This is entirely optional. Data that does not
-match the given regex for a given header will not be transferred and counts
-towards the unmatched data.
+The config file has five sections: defaults, source, target, output, and 
+field_rules. The defaults section contains default values for the source and 
+target sections. These are filled out for you in the template. The source and 
+target sections are to further specify information about the two csv files that 
+will be a part of the data transfer. Everything in these sections need values 
+except the things that appear in the defaults section. The output section is 
+mostly just to name the output file, but you can also change the dialect to 
+write output csvs in. Excel is the default and is what I would recommend. 
+More about dialects below. You can also optionally give the name for a file 
+to dump data that could not be matched. Finally, the field_rules section is 
+a place where you can specify formats for data to be validated against via 
+regex. This is entirely optional. Data that does not match the given regex 
+for a given header will not be transferred and counts towards the unmatched data.
 
 ## Config File Fields
 
@@ -123,14 +123,14 @@ dialect only determines things like what to quote, line terminator, etc. More
 info can be found [here](https://docs.python.org/3/library/csv.html#csv.excel).
 
 ---
-### fields section
+### field_rules section
 > Optionally put regex to match fields by. To see what types of regex syntax
 are supported, see the
 [python regex library documentation](https://docs.python.org/3/library/re.html).
 
 Example:
 ```ini
-[fields]
+[field_rules]
 IPv4 address = ^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$
 ```
 
@@ -163,5 +163,5 @@ unmatched_file_name =
 # valid dialects: unix, excel, excel_tab
 dialect = excel
 
-[fields]
+[field_rules]
 ```
