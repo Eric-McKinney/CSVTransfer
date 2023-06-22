@@ -102,7 +102,7 @@ class MyTestCase(unittest.TestCase):
                 "unmatched_file_name": "",
                 "dialect": "excel"
             },
-            "fields": {}
+            "field_rules": {}
         }
 
         self.assertConfigEquals(expected_constants, config)
@@ -161,7 +161,7 @@ class MyTestCase(unittest.TestCase):
                 "unmatched_file_name": "",
                 "dialect": input()
             },
-            "fields": {}
+            "field_rules": {}
         }
 
         sys.stdin.close()
@@ -351,7 +351,7 @@ class MyTestCase(unittest.TestCase):
                 "unmatched_file_name": "",
                 "dialect": "excel"
             },
-            "fields": {}
+            "field_rules": {}
         }
 
         expected_lines = [
@@ -377,7 +377,7 @@ class MyTestCase(unittest.TestCase):
         main.transfer_data(parsed_source, parsed_target, main.parse_target_columns(config),
                            config["source"]["match_by"], config["target"]["match_by"],
                            f'test_outputs/{config["output"]["unmatched_file_name"]}', config["output"]["dialect"],
-                           config["fields"])
+                           config["field_rules"])
         main.write_csv(f'test_outputs/{config["output"]["file_name"]}', parsed_target,
                        config["output"]["dialect"])
 
@@ -411,7 +411,7 @@ class MyTestCase(unittest.TestCase):
                 "unmatched_file_name": "unmatched2.csv",
                 "dialect": "unix"
             },
-            "fields": {
+            "field_rules": {
                 "employment status": r"^(([eE]|[uU]ne)mployed)$",
                 "social security": r"^\d+$"
             }

@@ -84,7 +84,7 @@ def main(args: list[str] = None):
     print("Transferring data...", end="", flush=True)
     transfer_data(parsed_source, parsed_target, parse_target_columns(config), config["source"]["match_by"],
                   config["target"]["match_by"], unmatched_output=config["output"]["unmatched_file_name"],
-                  dialect=config["output"]["dialect"])
+                  dialect=config["output"]["dialect"], regex=config["field_rules"])
     print("DONE\nWriting results to output file...", end="", flush=True)
     write_csv(config["output"]["file_name"], parsed_target, config["output"]["dialect"])
     print(f"DONE\n\nResults can be found in {config['output']['file_name']}")
