@@ -31,6 +31,7 @@ import sys
 # TODO: Determine how to prioritize information across sources, handle collisions, etc.
 # TODO: Add "rules" which data can be flagged by (e.g. only devices of this type should appear here)
 # TODO: For unmatched data show the source it's from
+# TODO: Add --strict which puts the first source in and if successive sources' data don't match they aren't added
 
 # Custom type aliases for clarity
 Header = str
