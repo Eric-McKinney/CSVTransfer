@@ -32,6 +32,7 @@ import sys
 # TODO: Add "rules" which data can be flagged by (e.g. only devices of this type should appear here)
 # TODO: For unmatched data show the source it's from
 # TODO: Add --strict which puts the first source in and if successive sources' data don't match they aren't added
+# TODO: Update documentation when done with all of the changes
 
 # Custom type aliases for clarity
 Header = str
@@ -42,8 +43,8 @@ CONFIG_FILE_NAME: str = "config_template.ini"
 DEBUG: bool = False  # either change this here or use --debug from command line
 HELP_MSG = """USAGE
 
-py main.py [OPTION]
 python3 main.py [OPTION]
+py main.py [OPTION]
 \tEnsure that both files are in the same directory as this script or a subdirectory (use relative path).
 \tSee README for more extensive detail.
 
@@ -56,6 +57,7 @@ OPTIONS
 
 
 def main(args: list[str] = None):
+    # TODO: Obviously gonna need to change a bunch of function calls and whatnot
     if args is None:
         if len(sys.argv) > 1:
             args = sys.argv[1:]
@@ -100,6 +102,7 @@ def valid_file_names(file_names: list[str]) -> bool:
     :return: True if valid, false if not valid
     """
 
+    # TODO: Actually don't need to change anything except how this function is called
     for file in file_names:
         # If files (or relative paths) aren't in the current directory then they are not valid
         path: str = os.path.join(os.getcwd(), file)
@@ -133,16 +136,17 @@ def get_config_constants() -> configparser.ConfigParser:
 
     # Set header_row_num and ignored_rows to defaults if not set (configparser does this but for all sections, and
     # I don't want that)
-    for section in ["source", "target"]:
+    for source in config["sources"]:  # TODO: Make my version of defaults expandable (e.g. end user can add to)
         for key in ["header_row_num", "ignored_rows"]:
-            if config[section][key] in [None, ""] and config["defaults"][key] not in [None, ""]:
-                config[section][key] = config["defaults"][key]
+            if config[source][key] in [None, ""] and config["defaults"][key] not in [None, ""]:
+                config[source][key] = config["defaults"][key]
 
     # Collect missing variables via stdin
-    for section in ["source", "target"]:
-        for key in config[section]:
-            if config[section][key] in [None, ""]:
-                config[section][key] = input(f"{key} missing for {section}. Input manually: ")
+    # TODO: No longer collect missing stuff via stdin, just dump error message of missing stuff and terminate
+    for source in config["sources"]:
+        for key in config[source]:
+            if config[source][key] in [None, ""]:
+                config[source][key] = input(f"{key} missing for {source}. Input manually: ")
     for key in ["file_name", "dialect"]:
         if config["output"][key] in [None, ""]:
             config["output"][key] = input(f"Output {key} missing. Input manually: ")
@@ -159,7 +163,9 @@ def parse_target_columns(config: configparser.ConfigParser) -> dict[str: str]:
     """
     source_target_cols: list[str] = config["source"]["target_column(s)"].split(",")
     target_target_cols: list[str] = config["target"]["target_column(s)"].split(",")
+    # TODO: Change to target cols (for all sources) and col names (also for all sources)
 
+    # TODO: Override the following with the logic I described in the config template
     if len(source_target_cols) != len(target_target_cols):
         raise SystemExit("Number of target column(s) must be the same for source and target\n"
                          f"{len(source_target_cols)} target columns for source found\n"
@@ -245,6 +251,8 @@ def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str
     :param regex: Dictionary of fields/headers (keys) and the regex (values) to validate them by
     :return:
     """
+
+    # TODO: Obviously I'm going to have to do almost a complete overhaul
     unmatched_data: list[dict] = []
     for row in source:
         data_to_match_by: str = row[source_match_by]
