@@ -134,22 +134,25 @@ def get_config_constants() -> configparser.ConfigParser:
     config = configparser.ConfigParser(allow_no_value=True)
     config.read(CONFIG_FILE_NAME)
 
-    # Set header_row_num and ignored_rows to defaults if not set (configparser does this but for all sections, and
-    # I don't want that)
-    for source in config["sources"]:  # TODO: Make my version of defaults expandable (e.g. end user can add to)
-        for key in ["header_row_num", "ignored_rows"]:
+    # Set all values of keys in sources appear in defaults to defaults if not set
+    # (configparser does this but for all sections, and I don't want that)
+    for source in config["sources"]:
+        for key in config["defaults"]:
             if config[source][key] in [None, ""] and config["defaults"][key] not in [None, ""]:
                 config[source][key] = config["defaults"][key]
 
-    # Collect missing variables via stdin
-    # TODO: No longer collect missing stuff via stdin, just dump error message of missing stuff and terminate
+    # Identify missing variables
+    missing: str = ""
     for source in config["sources"]:
-        for key in config[source]:
+        for key in ["target_column(s)", "header_row_num"]:
             if config[source][key] in [None, ""]:
-                config[source][key] = input(f"{key} missing for {source}. Input manually: ")
+                missing += f"{key} missing for {source}\n"
     for key in ["file_name", "dialect"]:
         if config["output"][key] in [None, ""]:
-            config["output"][key] = input(f"Output {key} missing. Input manually: ")
+            missing += f"Output {key} missing\n"
+
+    if missing != "":
+        raise SystemExit(missing.rstrip())
 
     return config
 
@@ -222,8 +225,7 @@ def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
 
                 rows.append(row)
     except FileNotFoundError:
-        print(f"Could not find {file_name}", file=sys.stderr)
-        exit(1)
+        raise SystemExit(f"Could not find {file_name}")
 
     return rows
 
@@ -327,7 +329,7 @@ def write_csv(file_name: str, data: list[Row], dialect: str) -> None:
         if overwrite in ["y", "yes"]:
             write_data(file_name, headers, data, dialect, new_file=False)
         else:
-            exit(1)
+            raise SystemExit()
 
 
 def write_data(file_name: str, headers: list[str], data: list[Row], dialect: str, new_file: bool = True) -> None:
