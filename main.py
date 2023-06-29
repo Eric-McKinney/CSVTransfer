@@ -74,16 +74,17 @@ def main(args: list[str] = None):
     config: configparser.ConfigParser = get_config_constants()
 
     if not valid_file_names(config["sources"].values()):
-        raise SystemExit("Invalid source file name(s) transfer aborted.")
+        raise SystemExit("Invalid source file name(s). Ensure the paths are correct in the config file.")
 
     print("="*80)
-    print("Parsing source...", end="", flush=True)
-    parsed_source: list[Row] = parse_csv(config["source"]["file_name"], config.getint("source", "header_row_num"),
-                                         parse_ignored_rows(config["source"]["ignored_rows"]))
-    print("DONE\nParsing target...", end="", flush=True)
-    parsed_target: list[Row] = parse_csv(config["target"]["file_name"], config.getint("target", "header_row_num"),
-                                         parse_ignored_rows(config["target"]["ignored_rows"]))
-    print("DONE")
+
+    parsed_sources: list[list[Row]] = []
+    for source in config["sources"]:
+        print(f"Parsing {source}...", end="", flush=True)
+        parsed_source: list[Row] = parse_csv(config["sources"][source], config.getint(source, "header_row_num"),
+                                             parse_ignored_rows(config["source"]["ignored_rows"]))
+        parsed_sources.append(parsed_source)
+        print("DONE", flush=True)
 
     print("Transferring data...", end="", flush=True)
     transfer_data(parsed_source, parsed_target, map_columns_names(config), config["source"]["match_by"],
@@ -92,6 +93,7 @@ def main(args: list[str] = None):
     print("DONE\nWriting results to output file...", end="", flush=True)
     write_csv(config["output"]["file_name"], parsed_target, config["output"]["dialect"])
     print(f"DONE\n\nResults can be found in {config['output']['file_name']}")
+    print("="*80)
 
 
 def valid_file_names(file_names: Iterable[str]) -> bool:
