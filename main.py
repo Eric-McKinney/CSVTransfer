@@ -78,20 +78,25 @@ def main(args: list[str] = None):
 
     print("="*80)
 
-    parsed_sources: list[list[Row]] = []
+    merged_data: list[Row] = []
+    # NOTE: The order of headers in each row dict doesn't matter,
+    #       only the order in which they are passed to the DictWriter (fieldnames param) matters
     for source in config["sources"]:
         print(f"Parsing {source}...", end="", flush=True)
         parsed_source: list[Row] = parse_csv(config["sources"][source], config.getint(source, "header_row_num"),
                                              parse_ignored_rows(config["source"]["ignored_rows"]))
-        parsed_sources.append(parsed_source)
         print("DONE", flush=True)
 
-    print("Transferring data...", end="", flush=True)
-    transfer_data(parsed_source, parsed_target, map_columns_names(config), config["source"]["match_by"],
-                  config["target"]["match_by"], unmatched_output=config["output"]["unmatched_file_name"],
-                  dialect=config["output"]["dialect"], regex=config["field_rules"])
-    print("DONE\nWriting results to output file...", end="", flush=True)
-    write_csv(config["output"]["file_name"], parsed_target, config["output"]["dialect"])
+        cols_name_mapping: dict = map_columns_names(config)
+
+        print(f"Transferring {source}'s data...", end="", flush=True)
+        transfer_data(parsed_source, merged_data, cols_name_mapping, config[source]["match_by"].split(","),
+                      unmatched_output=config["output"]["unmatched_file_name"], dialect=config["output"]["dialect"],
+                      regex=config["field_rules"])
+        print("DONE", flush=True)
+
+    print("Writing results to output file...", end="", flush=True)
+    write_csv(config["output"]["file_name"], merged_data, config["output"]["dialect"])
     print(f"DONE\n\nResults can be found in {config['output']['file_name']}")
     print("="*80)
 
@@ -251,9 +256,9 @@ def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
     return rows
 
 
-def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str: str], source_match_by: str,
-                  target_match_by: str, unmatched_output: str = None, dialect: str = "excel",
-                  regex: dict[Header: str] = None) -> None:
+def transfer_data(source: list[Row], output: list[Row], names_map: dict[str: str], match_by: list[str],
+                  unmatched_output: str = None, dialect: str = "excel", regex: dict[Header: str] = None,
+                  strict: bool = False) -> None:
     """
     Moves data from target column(s) (keys of target_columns dictionary) in the parsed source file to the target
     column(s) (values of target_columns dictionary) in the parsed target file. This is done for all the values in the
@@ -264,30 +269,33 @@ def transfer_data(source: list[Row], target: list[Row], target_columns: dict[str
     regex to be transferred. Data that does not match the regex will count towards the unmatched data.
 
     :param source: Parsed source file
-    :param target: Parsed target file
-    :param target_columns: Column(s) whose data will be transferred in source-destination pairs
-    :param source_match_by: Column from source file to align data by
-    :param target_match_by: Column from target file to align data by
+    :param output: Destination of data from source files
+    :param names_map: Column(s) whose data will be transferred and the names of the columns in the output to put them in
+    :param match_by: Columns from source file to align data by
     :param unmatched_output: Name of file to output unmatched values to. If no name is provided, unmatched values will
     not be recorded
     :param dialect: Dialect to write unmatched output in (same dialect as regular output)
     :param regex: Dictionary of fields/headers (keys) and the regex (values) to validate them by
+    :param strict: If true, sources after the first must match at least one field from match by to have data transferred
     :return:
     """
 
     # TODO: Obviously I'm going to have to do almost a complete overhaul
+    # For each row in source:
+    #   - try to find matches for data in match by columns (if strict and no match then put everything into unmatched)
+    #   - if no match and strict is off, then create a new row in output
+    #   - move data in match by and target columns (not if field is filled or if doesn't match regex)
     unmatched_data: list[dict] = []
     for row in source:
-        data_to_match_by: str = row[source_match_by]
         data_to_transfer: dict[Header: str] = {}
         found_match: bool = False
 
         # Extract data
-        for header in target_columns.keys():
+        for header in names_map.keys():
             data_to_transfer[header] = row[header]
 
         if regex is not None and not data_matches_regex(data_to_transfer, regex):
-            data_to_transfer[source_match_by] = data_to_match_by
+            data_to_transfer[source_match_by] = data_to_match_by  # originally to show what wasn't matching
             unmatched_data.append(data_to_transfer)
             continue
 
@@ -339,6 +347,7 @@ def write_csv(file_name: str, data: list[Row], dialect: str) -> None:
     :param dialect: csv dialect to use for writing
     :return:
     """
+    # TODO: Add a headers param so the order can be maintained for stuff like match by cols first
     headers: list[str] = data[0].keys()
 
     try:
