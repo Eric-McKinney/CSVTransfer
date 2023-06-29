@@ -24,6 +24,7 @@ import csv
 import os
 import re
 import sys
+from typing import Iterable
 
 # TODO: Shift to more of a CSVMerge than transfer (pull from multiple sources and output a new file)
 #       in this sense, be able to choose relevant fields. Also show in output what sources data appears in and maybe
@@ -72,8 +73,8 @@ def main(args: list[str] = None):
 
     config: configparser.ConfigParser = get_config_constants()
 
-    if not valid_file_names([config["source"]["file_name"], config["target"]["file_name"]]):
-        raise SystemExit("See README for proper usage or use --help")
+    if not valid_file_names(config["sources"].values()):
+        raise SystemExit("Invalid source file name(s) transfer aborted.")
 
     print("="*80)
     print("Parsing source...", end="", flush=True)
@@ -85,7 +86,7 @@ def main(args: list[str] = None):
     print("DONE")
 
     print("Transferring data...", end="", flush=True)
-    transfer_data(parsed_source, parsed_target, parse_target_columns(config), config["source"]["match_by"],
+    transfer_data(parsed_source, parsed_target, map_columns_names(config), config["source"]["match_by"],
                   config["target"]["match_by"], unmatched_output=config["output"]["unmatched_file_name"],
                   dialect=config["output"]["dialect"], regex=config["field_rules"])
     print("DONE\nWriting results to output file...", end="", flush=True)
@@ -93,7 +94,7 @@ def main(args: list[str] = None):
     print(f"DONE\n\nResults can be found in {config['output']['file_name']}")
 
 
-def valid_file_names(file_names: list[str]) -> bool:
+def valid_file_names(file_names: Iterable[str]) -> bool:
     """
     Determines if file names in config file are valid. File names should be relative paths of files that are within the
     current working directory or a subdirectory. (e.g. file_name, ./file_name, ./subdir/file_name).
@@ -102,7 +103,6 @@ def valid_file_names(file_names: list[str]) -> bool:
     :return: True if valid, false if not valid
     """
 
-    # TODO: Actually don't need to change anything except how this function is called
     for file in file_names:
         # If files (or relative paths) aren't in the current directory then they are not valid
         path: str = os.path.join(os.getcwd(), file)
@@ -120,8 +120,9 @@ def valid_file_names(file_names: list[str]) -> bool:
 def get_config_constants() -> configparser.ConfigParser:
     """
     Assigns config constants from the file CONFIG_FILE_NAME. Both the constants and the config file are described in the
-    README. Does extra parsing on variables which need to be put into a data structure.
+    README. Exits and prints error message if necessary fields are missing.
 
+    :raises SystemExit: If necessary fields are missing from config file.
     :return: ConfigParser object which acts as a map of the config file where the keys are the sections in the config
     file and the values are dictionaries of that section's variables where the keys are the variable name and the value
     is the value of that variable (as a string).
@@ -142,6 +143,9 @@ def get_config_constants() -> configparser.ConfigParser:
                 config[source][key] = config["defaults"][key]
 
     # Identify missing variables
+    if len(config["sources"]) == 0:
+        raise SystemExit("No sources found in config file")
+
     missing: str = ""
     for source in config["sources"]:
         for key in ["target_column(s)", "header_row_num"]:
@@ -157,24 +161,39 @@ def get_config_constants() -> configparser.ConfigParser:
     return config
 
 
-def parse_target_columns(config: configparser.ConfigParser) -> dict[str: str]:
+def map_columns_names(config: configparser.ConfigParser) -> dict[str: dict[str: str]]:
     """
-    Parses the comma separated lists of target columns from the config file into a dictionary.
+    Parses the comma separated lists of target columns, match by from the config file into a dictionary where headers
+    from both target columns and match by are mapped to new names given by column names and match by names. If there are
+    a different number of headers than names, then names are used up until they run out or there are no more headers.
+    Once names run out, headers will be mapped to themselves as new names. Match by are put before target columns.
 
     :param config: Parsed config file
     :return: Dictionary with source target column(s) as keys w/corresponding columns from target file as values
     """
-    source_target_cols: list[str] = config["source"]["target_column(s)"].split(",")
-    target_target_cols: list[str] = config["target"]["target_column(s)"].split(",")
-    # TODO: Change to target cols (for all sources) and col names (also for all sources)
+    cols_names_mapping: dict[str: dict[str: str]] = {}
 
-    # TODO: Override the following with the logic I described in the config template
-    if len(source_target_cols) != len(target_target_cols):
-        raise SystemExit("Number of target column(s) must be the same for source and target\n"
-                         f"{len(source_target_cols)} target columns for source found\n"
-                         f"{len(target_target_cols)} target columns for target found")
+    for source in config["sources"]:
+        target_cols: list[str] = config[source]["target_column(s)"].split(",")
+        col_names: list[str] = config[source]["column_name(s)"].split(",")
 
-    return {k: v for (k, v) in zip(source_target_cols, target_target_cols)}
+        match_by: list[str] = config[source]["match_by"].split(",")
+        match_by_names: list[str] = config[source]["match_by_name(s)"].split(",")
+
+        cols_names_mapping[source] = {}
+        for i, col in enumerate(match_by):
+            if i < len(match_by_names):
+                cols_names_mapping[source][col] = match_by_names[i]
+            else:
+                cols_names_mapping[source][col] = col
+
+        for i, col in enumerate(target_cols):
+            if i < len(col_names):
+                cols_names_mapping[source][col] = col_names[i]
+            else:
+                cols_names_mapping[source][col] = col
+
+    return cols_names_mapping
 
 
 def parse_ignored_rows(ignored_rows_str: str) -> list[int]:
