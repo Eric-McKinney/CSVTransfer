@@ -90,7 +90,7 @@ def main(args: list[str] = None):
         cols_name_mapping: dict = map_columns_names(config)
 
         print(f"Transferring {source}'s data...", end="", flush=True)
-        transfer_data(parsed_source, merged_data, cols_name_mapping, config[source]["match_by"].split(","),
+        transfer_data(source, parsed_source, merged_data, cols_name_mapping, config[source]["match_by"].split(","),
                       unmatched_output=config["output"]["unmatched_file_name"], dialect=config["output"]["dialect"],
                       regex=config["field_rules"])
         print("DONE", flush=True)
@@ -168,7 +168,7 @@ def get_config_constants() -> configparser.ConfigParser:
     return config
 
 
-def map_columns_names(config: configparser.ConfigParser) -> dict[str: dict[str: str]]:
+def map_columns_names(config: configparser.ConfigParser) -> dict[str: dict[Header: Header]]:
     """
     Parses the comma separated lists of target columns, match by from the config file into a dictionary where headers
     from both target columns and match by are mapped to new names given by column names and match by names. If there are
@@ -178,7 +178,7 @@ def map_columns_names(config: configparser.ConfigParser) -> dict[str: dict[str: 
     :param config: Parsed config file
     :return: Dictionary with source target column(s) as keys w/corresponding columns from target file as values
     """
-    cols_names_mapping: dict[str: dict[str: str]] = {}
+    cols_names_mapping: dict[str: dict[Header: Header]] = {}
 
     for source in config["sources"]:
         target_cols: list[str] = config[source]["target_column(s)"].split(",")
@@ -256,18 +256,23 @@ def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
     return rows
 
 
-def transfer_data(source: list[Row], output: list[Row], names_map: dict[str: str], match_by: list[str],
-                  unmatched_output: str = None, dialect: str = "excel", regex: dict[Header: str] = None,
-                  strict: bool = False) -> None:
+def transfer_data(source_name: str, source: list[Row], output: list[Row], names_map: dict[Header: Header],
+                  match_by: list[Header], unmatched_output: str = None, dialect: str = "excel",
+                  regex: dict[Header: str] = None, strict: bool = False) -> None:
     """
-    Moves data from target column(s) (keys of target_columns dictionary) in the parsed source file to the target
-    column(s) (values of target_columns dictionary) in the parsed target file. This is done for all the values in the
-    source file from the column specified by source_match_by. If a value in the source file from the column specified
-    by source_match_by does not have a matching value in the target file in the corresponding target_match_by column
-    then the data for that value is not transferred. If unmatched_output is given a value, unmatched data will be
-    written to that file. If regex is given, all data from fields present in the dictionary must match the associated
-    regex to be transferred. Data that does not match the regex will count towards the unmatched data.
+    Moves data from columns in the source whose headers appear in names_map to the output under the corresponding header
+    name that appear in the names_map. A match of the data transferred this way is attempted for data from the source in
+    the columns whose headers appear in match_by. The data is matched against data that exists in the output under the
+    headers that appear in the names_map as values associated with the keys that are contained in match_by. If a match
+    is found then any data that can fill an empty field will be transferred, otherwise nothing will be done and data not
+    transferred this way does not count towards the unmatched data. If a match cannot be found then the data to be
+    transferred will be appended to the output as long as strict is not true. If strict is true then this data will
+    contribute to the unmatched data instead of being included in the output. If regex is given, all data from fields
+    present in the dictionary must match the associated regex to be transferred. Data that does not match the regex will
+    count towards the unmatched data. If unmatched_output is given a value then unmatched data will be written to that
+    file.
 
+    :param source_name: Name of the source which the source file represents
     :param source: Parsed source file
     :param output: Destination of data from source files
     :param names_map: Column(s) whose data will be transferred and the names of the columns in the output to put them in
@@ -280,56 +285,74 @@ def transfer_data(source: list[Row], output: list[Row], names_map: dict[str: str
     :return:
     """
 
-    # TODO: Obviously I'm going to have to do almost a complete overhaul
     # For each row in source:
     #   - try to find matches for data in match by columns (if strict and no match then put everything into unmatched)
     #   - if no match and strict is off, then create a new row in output
     #   - move data in match by and target columns (not if field is filled or if doesn't match regex)
     unmatched_data: list[dict] = []
     for row in source:
-        data_to_transfer: dict[Header: str] = {}
+        data_to_transfer: dict[Header: str] = {}  # will contain only the data we want to transfer from the row
         found_match: bool = False
 
         # Extract data
-        for header in names_map.keys():
+        for header in names_map:
             data_to_transfer[header] = row[header]
 
-        if regex is not None and not data_matches_regex(data_to_transfer, regex):
-            data_to_transfer[source_match_by] = data_to_match_by  # originally to show what wasn't matching
+        if regex is not None and not data_matches_regex(data_to_transfer, names_map, regex):
+            data_to_transfer["source"] = source_name  # label what source it's from if it doesn't match regex
             unmatched_data.append(data_to_transfer)
             continue
 
-        for t_row in target:
-            if t_row[target_match_by] == data_to_match_by:
-                found_match = True
-                for header in target_columns.keys():
-                    t_header = target_columns[header]
-                    t_row[t_header] = data_to_transfer[header]
+        # attempt to find a match
+        for out_row in output:
+            for match in match_by:
+                if out_row[names_map[match]] == row[match]:
+                    found_match = True
+                    for header in names_map:
+                        out_header = names_map[header]
 
-                break
+                        if out_header not in out_row.keys():  # check if data is already there
+                            out_row[out_header] = data_to_transfer[header]
 
-        if unmatched_output not in [None, ""] and not found_match:
-            data_to_transfer[source_match_by] = data_to_match_by
+                    break
+
+        if not strict:
+            output.append(data_to_transfer)
+        elif unmatched_output not in [None, ""] and not found_match:
+            data_to_transfer["source"] = source_name
             unmatched_data.append(data_to_transfer)
 
     if unmatched_output not in [None, ""]:
         write_csv(unmatched_output, unmatched_data, dialect)
 
 
-def data_matches_regex(data: dict[Header: str], regex: dict[Header: str]) -> bool:
+def data_matches_regex(data: dict[Header: str], names_map: dict[Header: Header], regex: dict[Header: str]) -> bool:
     """
     Checks if given row's data that is being transferred matches the given regex for specific fields/headers. If a regex
     appears that refers to data not being transferred, it will be ignored.
 
     :param data: Dictionary of headers (keys) and associated data (values)
+    :param names_map: Mapping of headers in source to headers in output
     :param regex: Dictionary of headers (keys) and associated regex (values) for data to match
     :return: True if all data matches given regex, false otherwise
     """
-    for field in regex:
-        if field not in data.keys():
+    for header in regex:
+        if header not in names_map.values():  # if regex applies to a field not being transferred do nothing
             continue
 
-        if re.search(pattern=regex[field], string=data[field]) is None:
+        # since regex matching is done based on headers from output we need to find corresponding source header
+        source_header: str = ""
+        for s_header in names_map:
+            o_header = names_map[s_header]
+            if header == o_header:
+                source_header = s_header
+                break
+
+        if source_header == "":  # if there was no corresponding source header (shouldn't be possible) we have an issue
+            print(f"Regex match failed: No source header for output header \"{header}\"", file=sys.stderr)
+            return False
+
+        if re.search(pattern=regex[header], string=data[source_header]) is None:
             return False
 
     return True
