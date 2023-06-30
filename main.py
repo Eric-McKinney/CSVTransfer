@@ -78,6 +78,7 @@ def main(args: list[str] = None):
     print("="*80)
 
     merged_data: list[Row] = []
+    cols_name_mapping: dict = map_columns_names(config)
     # NOTE: The order of headers in each row dict doesn't matter,
     #       only the order in which they are passed to the DictWriter (fieldnames param) matters
     for source in config["sources"]:
@@ -86,12 +87,10 @@ def main(args: list[str] = None):
                                              parse_ignored_rows(config["source"]["ignored_rows"]))
         print("DONE", flush=True)
 
-        cols_name_mapping: dict = map_columns_names(config)
-
         print(f"Transferring {source}'s data...", end="", flush=True)
-        transfer_data(source, parsed_source, merged_data, cols_name_mapping, config[source]["match_by"].split(","),
-                      unmatched_output=config["output"]["unmatched_file_name"], dialect=config["output"]["dialect"],
-                      regex=config["field_rules"], strict=strict)
+        transfer_data(source, parsed_source, merged_data, cols_name_mapping[source],
+                      config[source]["match_by"].split(","), unmatched_output=config["output"]["unmatched_file_name"],
+                      dialect=config["output"]["dialect"], regex=config["field_rules"], strict=strict)
         print("DONE", flush=True)
 
     print("Writing results to output file...", end="", flush=True)
