@@ -26,13 +26,7 @@ import re
 import sys
 from typing import Iterable
 
-# TODO: Shift to more of a CSVMerge than transfer (pull from multiple sources and output a new file)
-#       in this sense, be able to choose relevant fields. Also show in output what sources data appears in and maybe
-#       the discrepancies between sources
-# TODO: Determine how to prioritize information across sources, handle collisions, etc.
 # TODO: Add "rules" which data can be flagged by (e.g. only devices of this type should appear here)
-# TODO: For unmatched data show the source it's from
-# TODO: Add --strict which puts the first source in and if successive sources' data don't match they aren't added
 # TODO: Update documentation when done with all of the changes
 
 # Custom type aliases for clarity
@@ -290,21 +284,17 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
     :return:
     """
 
-    # For each row in source:
-    #   - try to find matches for data in match by columns (if strict and no match then put everything into unmatched)
-    #   - if no match and strict is off, then create a new row in output
-    #   - move data in match by and target columns (not if field is filled or if doesn't match regex)
     unmatched_data: list[dict] = []
     for row in source:
         data_to_transfer: dict[Header: str] = {}  # will contain only the data we want to transfer from the row
         found_match: bool = False
 
         # Extract data
+        data_to_transfer["source(s) found in"] = source_name
         for header in names_map:
             data_to_transfer[header] = row[header]
 
         if regex is not None and not data_matches_regex(data_to_transfer, names_map, regex):
-            data_to_transfer["source"] = source_name  # label what source it's from if it doesn't match regex
             unmatched_data.append(data_to_transfer)
             continue
 
@@ -313,10 +303,18 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
             for match in match_by:
                 if out_row[names_map[match]] == row[match]:
                     found_match = True
-                    for header in names_map:
+                    for header in data_to_transfer:
+                        if header == "source(s) found in":  # append source name to output under "source(s) found in"
+                            if header not in out_row.keys():
+                                out_row[header] = data_to_transfer[header]
+                            else:
+                                out_row[header] += f", {data_to_transfer[header]}"
+
+                            continue
+
                         out_header = names_map[header]
 
-                        if out_header not in out_row.keys():  # check if data is already there
+                        if out_header not in out_row.keys():  # check if data is already there before moving data
                             out_row[out_header] = data_to_transfer[header]
 
                     break
@@ -324,7 +322,6 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
         if not strict:
             output.append(data_to_transfer)
         elif unmatched_output not in [None, ""] and not found_match:
-            data_to_transfer["source"] = source_name
             unmatched_data.append(data_to_transfer)
 
     if unmatched_output not in [None, ""]:
