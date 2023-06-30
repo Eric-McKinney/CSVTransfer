@@ -55,7 +55,6 @@ OPTIONS
 
 
 def main(args: list[str] = None):
-    # TODO: Obviously gonna need to change a bunch of function calls and whatnot
     if args is None:
         if len(sys.argv) > 1:
             args = sys.argv[1:]
@@ -94,7 +93,8 @@ def main(args: list[str] = None):
         print("DONE", flush=True)
 
     print("Writing results to output file...", end="", flush=True)
-    write_csv(config["output"]["file_name"], merged_data, config["output"]["dialect"])
+    headers: list[str] = unify_headers(cols_name_mapping)
+    write_csv(config["output"]["file_name"], headers, merged_data, config["output"]["dialect"])
     print(f"DONE\n\nResults can be found in {config['output']['file_name']}")
     print("="*80)
 
@@ -318,13 +318,15 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
 
                     break
 
-        if not strict:
+        if not strict and not found_match:
             output.append(data_to_transfer)
         elif unmatched_output not in [None, ""] and not found_match:
             unmatched_data.append(data_to_transfer)
 
     if unmatched_output not in [None, ""]:
-        write_csv(unmatched_output, unmatched_data, dialect)
+        headers: list[str] = ["source(s) found in"]
+        headers.extend(names_map.keys())
+        write_csv(unmatched_output, headers, unmatched_data, dialect, append=True)
 
 
 def data_matches_regex(data: dict[Header: str], names_map: dict[Header: Header], regex: dict[Header: str]) -> bool:
@@ -359,7 +361,18 @@ def data_matches_regex(data: dict[Header: str], names_map: dict[Header: Header],
     return True
 
 
-def write_csv(file_name: str, data: list[Row], dialect: str) -> None:
+def unify_headers(names_map: dict[str: dict[Header: Header]]) -> list[str]:
+    unified_headers: list[str] = []
+
+    for source in names_map:
+        for header in source.values():
+            if header not in unified_headers:
+                unified_headers.append(header)
+
+    return unified_headers
+
+
+def write_csv(file_name: str, headers: list[str], data: list[Row], dialect: str, append: bool = False) -> None:
     """
     Writes data to a csv from a list of rows where each row is a dictionary containing keys which are the
     headers and values which are the elements of that row using the given dialect. If there is no file by the given
@@ -367,40 +380,39 @@ def write_csv(file_name: str, data: list[Row], dialect: str) -> None:
     overwritten.
 
     :param file_name: Name of file to be written to or created
+    :param headers: Headers for the output file in the order that they should appear
     :param data: Data to write to the file
     :param dialect: csv dialect to use for writing
+    :param append: If true, will append instead of creating a new file/overwriting file after asking
     :return:
     """
-    # TODO: Add a headers param so the order can be maintained for stuff like match by cols first
-    headers: list[str] = data[0].keys()
 
+    mode = "a" if append else "x"
     try:
-        write_data(file_name, headers, data, dialect)
+        write_data(file_name, mode, headers, data, dialect)
     except FileExistsError:
         print(f"File \"{file_name}\" already exists", file=sys.stderr)
         overwrite = input("Overwrite it (y/N)? ").lower()
 
         if overwrite in ["y", "yes"]:
-            write_data(file_name, headers, data, dialect, new_file=False)
+            write_data(file_name, "w", headers, data, dialect)
         else:
             raise SystemExit()
 
 
-def write_data(file_name: str, headers: list[str], data: list[Row], dialect: str, new_file: bool = True) -> None:
+def write_data(file_name: str, mode, headers: list[str], data: list[Row], dialect: str) -> None:
     """
-    Writes data to a file by the given name. Will create a file if one by the given name does not exist. If a file by
-    the given name exists and the intent is to have it overwritten, new_file should be false.
+    Writes data to a file by the given name using the given mode and dialect.
 
     :param file_name: Name of file to be written to or created.
+    :param mode: What mode to open the file in (w, r, a, etc.)
     :param headers: List of the headers for csv file.
     :param data: Data to write to the file.
     :param dialect: csv dialect to use for writing
-    :param new_file: If true, tries to create a new file and will not overwrite files by the name file_name. If false,
-    the behavior is the same, but it will overwrite files by the name file_name without warning.
-    :raises FileExistsError: If new_file is true and there is already a file by the name file_name.
+    :raises FileExistsError: If mode is "x" and there is already a file by the name file_name.
     :return:
     """
-    with open(file_name, "x" if new_file else "w", newline='') as csvfile:
+    with open(file_name, mode, newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=headers, dialect=dialect)
         writer.writeheader()
         writer.writerows(data)
