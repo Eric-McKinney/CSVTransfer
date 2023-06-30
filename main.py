@@ -54,6 +54,9 @@ OPTIONS
 \t\tEnables debug print statements
 \t-h, --help
 \t\tPrints help message and terminates
+\t--strict
+\t\tIf data after the first source does not match in at least one of the match_by fields, then the data is considered
+\t\tunmatched as opposed to being appended to the output in its own row
 """
 
 
@@ -70,6 +73,8 @@ def main(args: list[str] = None):
     if "--debug" in args:
         global DEBUG  # I'd prefer not to do this, but this is the only time trust
         DEBUG = True
+
+    strict: bool = "--strict" in args
 
     config: configparser.ConfigParser = get_config_constants()
 
@@ -92,7 +97,7 @@ def main(args: list[str] = None):
         print(f"Transferring {source}'s data...", end="", flush=True)
         transfer_data(source, parsed_source, merged_data, cols_name_mapping, config[source]["match_by"].split(","),
                       unmatched_output=config["output"]["unmatched_file_name"], dialect=config["output"]["dialect"],
-                      regex=config["field_rules"])
+                      regex=config["field_rules"], strict=strict)
         print("DONE", flush=True)
 
     print("Writing results to output file...", end="", flush=True)
