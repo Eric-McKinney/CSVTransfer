@@ -289,27 +289,29 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
     :return:
     """
 
+    first_source: bool = output == []
+    output_copy = output.copy()  # needed for when we search for matches while potentially appending after each loop
     unmatched_data: list[dict] = []
     for row in source:
         data_to_transfer: dict[Header: str] = {}  # will contain only the data we want to transfer from the row
         found_match: bool = False
 
         # Extract data
-        data_to_transfer["source(s) found in"] = source_name
+        data_to_transfer["Source(s) found in"] = source_name
         for header in names_map:
-            data_to_transfer[header] = row[header]
+            data_to_transfer[names_map[header]] = row[header]
 
         if regex is not None and not data_matches_regex(data_to_transfer, names_map, regex):
             unmatched_data.append(data_to_transfer)
             continue
 
         # attempt to find a match
-        for out_row in output:
+        for out_row in output_copy:
             for match in match_by:
                 if out_row[names_map[match]] == row[match]:
                     found_match = True
                     for header in data_to_transfer:
-                        if header == "source(s) found in":  # append source name to output under "source(s) found in"
+                        if header == "Source(s) found in":  # append source name to output under "source(s) found in"
                             if header not in out_row.keys():
                                 out_row[header] = data_to_transfer[header]
                             else:
@@ -317,22 +319,31 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
 
                             continue
 
-                        out_header = names_map[header]
-
-                        if out_header not in out_row.keys():  # check if data is already there before moving data
-                            out_row[out_header] = data_to_transfer[header]
+                        # check if data is already there before moving data
+                        if header not in out_row.keys() or out_row[header] in ["", None]:
+                            out_row[header] = data_to_transfer[header]
 
                     break
 
-        if not strict and not found_match:
+        if (not strict or first_source) and not found_match:
             output.append(data_to_transfer)
         elif unmatched_output not in [None, ""] and not found_match:
-            unmatched_data.append(data_to_transfer)
+            data = {"Source(s) found in": source_name}
+            for header in names_map:
+                data[header] = row[header]
+
+            unmatched_data.append(data)
 
     if unmatched_output not in [None, ""]:
-        headers: list[str] = ["source(s) found in"]
-        headers.extend(names_map.keys())
-        write_csv(unmatched_output, headers, unmatched_data, dialect, append=True)
+        append = not first_source
+
+        if unmatched_data == []:
+            with open(unmatched_output, "a" if append else "w") as f:
+                f.write(f"{source_name} had no unmatched data :)\n")
+        else:
+            headers: list[str] = ["Source(s) found in"]
+            headers.extend(names_map.keys())
+            write_csv(unmatched_output, headers, unmatched_data, dialect, append=append)
 
 
 def data_matches_regex(data: dict[Header: str], names_map: dict[Header: Header], regex: dict[Header: str]) -> bool:
