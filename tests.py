@@ -81,27 +81,34 @@ class MyTestCase(unittest.TestCase):
         expected_constants: dict = {
             "defaults": {
                 "header_row_num": "0",
-                "ignored_rows": "-1"
+                "ignored_row(s)": "-1"
             },
-            "source": {
-                "file_name": "example_files/example.csv",
+            "sources": {
+                "source1": "example_files/example.csv",
+                "source3": "example_files/example3.csv",
+            },
+            "source1": {
                 "target_column(s)": "Favorite Color",
+                "column_name(s)": "favorite color",
                 "match_by": "Social Security Number",
+                "match_by_name(s)": "social security",
                 "header_row_num": "0",
-                "ignored_rows": "-1"
+                "ignored_row(s)": "-1"
             },
-            "target": {
-                "file_name": "example_files/example3.csv",
+            "source3": {
                 "target_column(s)": "favorite color",
+                "column_name(s)": "",
                 "match_by": "social security",
+                "match_by_name(s)": "",
                 "header_row_num": "1",
-                "ignored_rows": "0,5"
+                "ignored_row(s)": "0,5"
             },
             "output": {
                 "file_name": "output.csv",
                 "unmatched_file_name": "",
                 "dialect": "excel"
             },
+            "source_rules": {},
             "field_rules": {}
         }
 
@@ -112,62 +119,23 @@ class MyTestCase(unittest.TestCase):
         with self.assertRaises(SystemExit):
             main.get_config_constants()
 
-    def test_get_constants_from_stdin(self):  # Give same inputs for the function call and the test inputs
-        redirection_file = "test_outputs/constants_to_redirect_to_stdin.txt"
-        with open(redirection_file, "w") as f:
-            for _ in range(2):
-                f.write("source_name\n")
-                f.write("target_col\n")
-                f.write("match\n")
-                f.write("1\n")
-                f.write("0\n")
-
-                f.write("target_name\n")
-                f.write("col_target\n")
-                f.write("by\n")
-                f.write("0\n")
-                f.write("1\n")
-
-                f.write("out.csv\n")
-                f.write("out_dialect\n")
-
-        temp_stdin = sys.stdin
-        sys.stdin = open(redirection_file)
+    def test_get_constants_missing_constants(self):  # Give same inputs for the function call and the test inputs
         main.CONFIG_FILE_NAME = "example_files/empty_config.ini"
 
-        config: configparser.ConfigParser = main.get_config_constants()
+        with self.assertRaises(SystemExit):
+            main.get_config_constants()
 
-        expected_constants: dict = {
-            "defaults": {
-                "header_row_num": "",
-                "ignored_rows": ""
-            },
-            "source": {
-                "file_name": input(),
-                "target_column(s)": input(),
-                "match_by": input(),
-                "header_row_num": input(),
-                "ignored_rows": input()
-            },
-            "target": {
-                "file_name": input(),
-                "target_column(s)": input(),
-                "match_by": input(),
-                "header_row_num": input(),
-                "ignored_rows": input()
-            },
-            "output": {
-                "file_name": input(),
-                "unmatched_file_name": "",
-                "dialect": input()
-            },
-            "field_rules": {}
-        }
+    def test_get_constants_missing_constants2(self):
+        main.CONFIG_FILE_NAME = "example_files/empty_config2.ini"
 
-        sys.stdin.close()
-        sys.stdin = temp_stdin
+        with self.assertRaises(SystemExit):
+            main.get_config_constants()
 
-        self.assertConfigEquals(expected_constants, config)
+    def test_get_constants_missing_constants3(self):
+        main.CONFIG_FILE_NAME = "example_files/empty_config3.ini"
+
+        with self.assertRaises(SystemExit):
+            main.get_config_constants()
 
     def test_write_to_csv(self):
         sample_data: list[main.Row] = [
