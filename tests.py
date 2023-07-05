@@ -1,7 +1,6 @@
 import configparser
 import unittest
 import main
-import sys
 
 
 class MyTestCase(unittest.TestCase):
@@ -143,7 +142,9 @@ class MyTestCase(unittest.TestCase):
             {"Name": "Test", "Occupation": "None"},
             {"Name": "Batman", "Occupation": "Hero"}
         ]
-        main.write_csv("test_outputs/test_output.csv", sample_data, dialect="excel")
+        headers: list[str] = ["Name", "Occupation"]
+
+        main.write_csv("test_outputs/test_output.csv", headers, sample_data, dialect="excel")
 
         with open("test_outputs/test_output.csv") as f:
             lines = f.readlines()
@@ -158,14 +159,7 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(expected_lines, lines)
 
     def test_transfer_data(self):
-        source: list[main.Row] = [
-            {"x": "1", "x^2": "1", "x^3": "1"},
-            {"x": "2", "x^2": "4", "x^3": "8"},
-            {"x": "3", "x^2": "9", "x^3": "27"},
-            {"x": "4", "x^2": "16", "x^3": "64"},
-            {"x": "5", "x^2": "25", "x^3": "125"}
-        ]
-        target: list[main.Row] = [
+        source1: list[main.Row] = [
             {"t": "1", "func1": "2", "func2": "4"},
             {"t": "2", "func1": "4", "func2": ""},
             {"t": "3", "func1": "6", "func2": "88"},
@@ -174,69 +168,114 @@ class MyTestCase(unittest.TestCase):
             {"t": "6", "func1": "13", "func2": ""},
             {"t": "7", "func1": "19", "func2": "2"}
         ]
-        target_columns: dict[str: str] = {"x^2": "func2"}
-        source_match_by: str = "x"
-        target_match_by: str = "t"
+        source2: list[main.Row] = [
+            {"x": "1", "x^2": "1", "x^3": "1"},
+            {"x": "2", "x^2": "4", "x^3": "8"},
+            {"x": "3", "x^2": "9", "x^3": "27"},
+            {"x": "4", "x^2": "16", "x^3": "64"},
+            {"x": "5", "x^2": "25", "x^3": "125"}
+        ]
+        source1_name = "source1"
+        source2_name = "source2"
+        names_map1: dict[str: str] = {"t": "t", "func1": "func1", "func2": "func2"}
+        names_map2: dict[str: str] = {"x": "t", "x^2": "func1", "x^3": "func2"}
+        match_by1: list[str] = []
+        match_by2: list[str] = ["x"]
 
-        main.transfer_data(source, target, target_columns, source_match_by, target_match_by)
+        output = []
 
-        expected_target = [
-            {"t": "1", "func1": "2", "func2": "1"},
-            {"t": "2", "func1": "4", "func2": "4"},
-            {"t": "3", "func1": "6", "func2": "9"},
-            {"t": "4", "func1": "8", "func2": "16"},
-            {"t": "5", "func1": "10", "func2": "25"},
-            {"t": "6", "func1": "13", "func2": ""},
-            {"t": "7", "func1": "19", "func2": "2"}
+        main.transfer_data(source1_name, source1, output, names_map1, match_by1)
+        main.transfer_data(source2_name, source2, output, names_map2, match_by2)
+
+        expected_output = [
+            {"Source(s) found in": "source1, source2", "t": "1", "func1": "2", "func2": "4"},
+            {"Source(s) found in": "source1, source2", "t": "2", "func1": "4", "func2": "8"},
+            {"Source(s) found in": "source1, source2", "t": "3", "func1": "6", "func2": "88"},
+            {"Source(s) found in": "source1, source2", "t": "4", "func1": "8", "func2": "64"},
+            {"Source(s) found in": "source1, source2", "t": "5", "func1": "10", "func2": "3"},
+            {"Source(s) found in": "source1", "t": "6", "func1": "13", "func2": ""},
+            {"Source(s) found in": "source1", "t": "7", "func1": "19", "func2": "2"}
         ]
 
-        self.assertEqual(expected_target, target)
+        self.assertEqual(expected_output, output)
 
     def test_transfer_data2(self):
-        source: list[main.Row] = [
+        source1: list[main.Row] = [
             {"Song": "Power Slam", "Rating": "8/10"},
             {"Song": "Mirror of the World", "Rating": "9/10"},
             {"Song": "Freesia", "Rating": "10/10"},
             {"Song": "Nobody", "Rating": "10/10"},
             {"Song": "HEAVY DAY", "Rating": "11/10"}
         ]
-        target: list[main.Row] = [
+        source2: list[main.Row] = [
             {"song": "Alone Infection", "rating": "9/10"},
             {"song": "Requiem", "rating": "10/10"},
             {"song": "HEAVY DAY", "rating": "9/10"},
             {"song": "505", "rating": "10/10"}
         ]
-        target_columns: dict[str: str] = {"Rating": "rating"}
-        source_match_by: str = "Song"
-        target_match_by: str = "song"
-        unmatched_out_name: str = "test_outputs/unmatched_transfer2.csv"
+        source1_name = "source1"
+        source2_name = "source2"
+        names_map1: dict[str: str] = {"Song": "Song", "Rating": "Rating"}
+        names_map2: dict[str: str] = {"song": "Song", "rating": "Rating"}
+        match_by1: list[str] = []
+        match_by2: list[str] = ["song"]
 
-        main.transfer_data(source, target, target_columns, source_match_by, target_match_by,
-                           unmatched_output=unmatched_out_name, dialect="excel")
+        output = []
+        strict_output = []
+
+        unmatched_out_name: str = "test_outputs/unmatched_transfer2.csv"
+        unmatched_out_name2: str = "test_outputs/unmatched_transfer2_strict.csv"
+
+        main.transfer_data(source1_name, source1, output, names_map1, match_by1, unmatched_output=unmatched_out_name)
+        main.transfer_data(source2_name, source2, output, names_map2, match_by2, unmatched_output=unmatched_out_name)
+
+        main.transfer_data(source1_name, source1, strict_output, names_map1, match_by1,
+                           unmatched_output=unmatched_out_name2, strict=True)
+        main.transfer_data(source2_name, source2, strict_output, names_map2, match_by2,
+                           unmatched_output=unmatched_out_name2, strict=True)
 
         with open(unmatched_out_name) as f:
             unmatched_lines: list[str] = f.readlines()
+        with open(unmatched_out_name2) as f:
+            strict_unmatched_lines: list[str] = f.readlines()
 
-        expected_target = [
-            {"song": "Alone Infection", "rating": "9/10"},
-            {"song": "Requiem", "rating": "10/10"},
-            {"song": "HEAVY DAY", "rating": "11/10"},
-            {"song": "505", "rating": "10/10"}
+        expected_output = [
+            {"Source(s) found in": "source1", "Song": "Power Slam", "Rating": "8/10"},
+            {"Source(s) found in": "source1", "Song": "Mirror of the World", "Rating": "9/10"},
+            {"Source(s) found in": "source1", "Song": "Freesia", "Rating": "10/10"},
+            {"Source(s) found in": "source1", "Song": "Nobody", "Rating": "10/10"},
+            {"Source(s) found in": "source1, source2", "Song": "HEAVY DAY", "Rating": "11/10"},
+            {"Source(s) found in": "source2", "Song": "Alone Infection", "Rating": "9/10"},
+            {"Source(s) found in": "source2", "Song": "Requiem", "Rating": "10/10"},
+            {"Source(s) found in": "source2", "Song": "505", "Rating": "10/10"}
+        ]
+        expected_strict_output = [
+            {"Source(s) found in": "source1", "Song": "Power Slam", "Rating": "8/10"},
+            {"Source(s) found in": "source1", "Song": "Mirror of the World", "Rating": "9/10"},
+            {"Source(s) found in": "source1", "Song": "Freesia", "Rating": "10/10"},
+            {"Source(s) found in": "source1", "Song": "Nobody", "Rating": "10/10"},
+            {"Source(s) found in": "source1, source2", "Song": "HEAVY DAY", "Rating": "11/10"}
         ]
 
         expected_unmatched_lines: list[str] = [
-            "Rating,Song\n",
-            "8/10,Power Slam\n",
-            "9/10,Mirror of the World\n",
-            "10/10,Freesia\n",
-            "10/10,Nobody\n"
+            "source1 had no unmatched data :)\n",
+            "source2 had no unmatched data :)\n"
+        ]
+        expected_strict_unmatched_lines: list[str] = [
+            "source1 had no unmatched data :)\n",
+            "Source(s) found in,song,rating\n",
+            "source2,Alone Infection,9/10\n",
+            "source2,Requiem,10/10\n",
+            "source2,505,10/10\n"
         ]
 
-        self.assertEqual(expected_target, target)
+        self.assertEqual(expected_output, output)
         self.assertEqual(expected_unmatched_lines, unmatched_lines)
+        self.assertEqual(expected_strict_output, strict_output)
+        self.assertEqual(expected_strict_unmatched_lines, strict_unmatched_lines)
 
     def test_transfer_data3(self):
-        source: list[dict] = [
+        source1: list[dict] = [
             {"File Name": "abc.def", "File Format": "def", "File Size": "300kB", "Marked For Deletion": "True"},
             {"File Name": "important_data.csv", "File Format": "csv", "File Size": "20MB",
              "Marked For Deletion": "False"},
@@ -244,38 +283,53 @@ class MyTestCase(unittest.TestCase):
             {"File Name": "info.txt", "File Format": "txt", "File Size": "10kB", "Marked For Deletion": "False"},
             {"File Name": "music.mp3", "File Format": "mp3", "File Size": "400MB", "Marked For Deletion": "False"}
         ]
-        target: list[dict] = [
+        source2: list[dict] = [
             {"Name": "proj.c", "Size": "89B", "Owner": "npp", "Last Changed": "5/30/23", "Delete?": "n"},
             {"Name": "funny.jpg", "Size": "500TB", "Owner": "me", "Last Changed": "1/20/23", "Delete?": ""},
             {"Name": "music.mp3", "Size": "0B", "Owner": "you", "Last Changed": "3/2/03", "Delete?": ""},
             {"Name": "important_data.csv", "Size": "40GB", "Owner": "root", "Last Changed": "2/2/20", "Delete?": ""},
             {"Name": "new_file", "Size": "1B", "Owner": "Simon Cowell", "Last Changed": "6/1/23", "Delete?": ""}
         ]
-        target_columns: dict[str: str] = {"File Size": "Size", "Marked For Deletion": "Delete?"}
-        source_match_by: str = "File Name"
-        target_match_by: str = "Name"
+        source3: list[dict] = [
+        ]
+
+        source1_name = "source1"
+        source2_name = "source2"
+        source3_name = "source3"
+        names_map1: dict[str: str] = {"File Name": "Name", "File Size": "Size", "Marked For Deletion": "Delete?"}
+        names_map2: dict[str: str] = {"Name": "Name", "Owner": "Owner", "Size": "Size", "Delete?": "Delete?"}
+        names_map3: dict[str: str] = {}
+        match_by1: list[str] = []
+        match_by2: list[str] = ["Name"]
+        match_by3: list[str] = []
         unmatched_out_name = "test_outputs/unmatched_transfer3.csv"
 
-        main.transfer_data(source, target, target_columns, source_match_by, target_match_by, unmatched_out_name)
+        output = []
+
+        main.transfer_data(source1_name, source1, output, names_map1, match_by1, unmatched_output=unmatched_out_name)
+        main.transfer_data(source2_name, source2, output, names_map2, match_by2, unmatched_output=unmatched_out_name)
+        main.transfer_data(source3_name, source3, output, names_map3, match_by3, unmatched_output=unmatched_out_name)
 
         with open(unmatched_out_name) as f:
             unmatched_lines: list[str] = f.readlines()
 
-        expected_target: list[dict] = [
-            {"Name": "proj.c", "Size": "89B", "Owner": "npp", "Last Changed": "5/30/23", "Delete?": "n"},
-            {"Name": "funny.jpg", "Size": "40MB", "Owner": "me", "Last Changed": "1/20/23", "Delete?": "False"},
-            {"Name": "music.mp3", "Size": "400MB", "Owner": "you", "Last Changed": "3/2/03", "Delete?": "False"},
-            {"Name": "important_data.csv", "Size": "20MB", "Owner": "root", "Last Changed": "2/2/20",
-             "Delete?": "False"},
-            {"Name": "new_file", "Size": "1B", "Owner": "Simon Cowell", "Last Changed": "6/1/23", "Delete?": ""}
+        expected_output: list[dict] = [
+            {"Source(s) found in": "source1", "Name": "abc.def", "Size": "300kB", "Delete?": "True"},
+            {"Source(s) found in": "source1, source2", "Name": "important_data.csv", "Size": "20MB", "Delete?": "False",
+             "Owner": "root"},
+            {"Source(s) found in": "source1, source2", "Name": "funny.jpg", "Size": "40MB", "Delete?": "False"},
+            {"Source(s) found in": "source1", "Name": "info.txt", "Size": "10kB", "Delete?": "False"},
+            {"Source(s) found in": "source1, source2", "Name": "music.mp3", "Size": "400MB", "Delete?": "False"},
+            {"Source(s) found in": "source2", "Name": "proj.c", "Size": "89B", "Owner": "npp", "Delete?": "n"},
+            {"Source(s) found in": "source2", "Name": "new_file", "Size": "1B", "Owner": "Simon Cowell", "Delete?": ""}
         ]
         expected_unmatched_lines: list[str] = [
-            "File Size,Marked For Deletion,File Name\n",
-            "300kB,True,abc.def\n",
-            "10kB,False,info.txt\n"
+            "No unmatched data for source1 :)\n",
+            "No unmatched data for source2 :)\n",
+            "No unmatched data for source3 :)\n"
         ]
 
-        self.assertEqual(expected_target, target)
+        self.assertEqual(expected_output, output)
         self.assertEqual(expected_unmatched_lines, unmatched_lines)
 
     def test_everything_together(self):
