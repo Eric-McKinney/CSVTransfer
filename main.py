@@ -143,7 +143,13 @@ def get_config_constants() -> configparser.ConfigParser:
     # Set all values of keys in sources appear in defaults to defaults if not set
     # (configparser does this but for all sections, and I don't want that)
     for source in config["sources"]:
+        if source not in config:
+            raise SystemExit(f"No section found for {source}")
+
         for key in config["defaults"]:
+            if key not in config[source]:
+                raise SystemExit(f"Key {key} not found in {source}")
+
             if config[source][key] in [None, ""] and config["defaults"][key] not in [None, ""]:
                 config[source][key] = config["defaults"][key]
 
@@ -154,10 +160,10 @@ def get_config_constants() -> configparser.ConfigParser:
     missing: str = ""
     for source in config["sources"]:
         for key in ["target_column(s)", "header_row_num"]:
-            if config[source][key] in [None, ""]:
+            if key not in config[source] or config[source][key] in [None, ""]:
                 missing += f"{key} missing for {source}\n"
     for key in ["file_name", "dialect"]:
-        if config["output"][key] in [None, ""]:
+        if key not in config["output"] or config["output"][key] in [None, ""]:
             missing += f"Output {key} missing\n"
 
     if missing != "":
