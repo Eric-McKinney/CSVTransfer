@@ -103,7 +103,7 @@ class MyTestCase(unittest.TestCase):
                 "ignored_row(s)": "0,5"
             },
             "output": {
-                "file_name": "output.csv",
+                "file_name": "test_outputs/output.csv",
                 "unmatched_file_name": "",
                 "dialect": "excel"
             },
@@ -344,54 +344,54 @@ class MyTestCase(unittest.TestCase):
 
     def test_everything_together(self):
         main.CONFIG_FILE_NAME = "example_files/config_example.ini"
-        config: configparser.ConfigParser = main.get_config_constants()
-        parsed_source: list[main.Row] = main.parse_csv(config["source"]["file_name"],
-                                                       config.getint("source", "header_row_num"),
-                                                       main.parse_ignored_rows(config["source"]["ignored_rows"]))
-        parsed_target: list[main.Row] = main.parse_csv(config["target"]["file_name"],
-                                                       config.getint("target", "header_row_num"),
-                                                       main.parse_ignored_rows(config["target"]["ignored_rows"]))
-        main.transfer_data(parsed_source, parsed_target, main.parse_target_columns(config),
-                           config["source"]["match_by"], config["target"]["match_by"])
-        main.write_csv(f'test_outputs/{config["output"]["file_name"]}', parsed_target,
-                       config["output"]["dialect"])
+        config = main.get_config_constants()
+        main.main()
 
-        with open(f'test_outputs/{config["output"]["file_name"]}') as f:
+        with open(f'{config["output"]["file_name"]}') as f:
             lines = f.readlines()
 
         expected_constants = {
             "defaults": {
                 "header_row_num": "0",
-                "ignored_rows": "-1"
+                "ignored_row(s)": "-1"
             },
-            "source": {
-                "file_name": "example_files/example.csv",
+            "sources": {
+                "source1": "example_files/example.csv",
+                "source3": "example_files/example3.csv",
+            },
+            "source1": {
                 "target_column(s)": "Favorite Color",
+                "column_name(s)": "favorite color",
                 "match_by": "Social Security Number",
+                "match_by_name(s)": "social security",
                 "header_row_num": "0",
-                "ignored_rows": "-1"
+                "ignored_row(s)": "-1"
             },
-            "target": {
-                "file_name": "example_files/example3.csv",
+            "source3": {
                 "target_column(s)": "favorite color",
+                "column_name(s)": "",
                 "match_by": "social security",
+                "match_by_name(s)": "",
                 "header_row_num": "1",
-                "ignored_rows": "0,5"
+                "ignored_row(s)": "0,5"
             },
             "output": {
-                "file_name": "output.csv",
+                "file_name": "test_outputs/output.csv",
                 "unmatched_file_name": "",
                 "dialect": "excel"
             },
+            "source_rules": {},
             "field_rules": {}
         }
 
         expected_lines = [
-            "social security,d.o.b,\"last name, first name\",employment status,favorite color,hobbies,comments\n",
-            ",,\"Bob, Joe\",employed,Teal,Tennis,\n",
-            "1234321,5/31/2000,\"Wayne, Emily\",,Yellow,,No comment\n",
-            "234111,1/1/1970,\"Last, First\",employed,Green,Deliberate misinformation,Mr. Unix Epoch\n",
-            "565,,,employed,Royal purple,No hobby,\n"
+            "Source(s) found in,social security,favorite color\n",
+            "source1,123456,Red\n",
+            "source1,987654321,Orange\n",
+            "\"source1, source3\",1234321,Yellow\n",
+            "\"source1, source3\",234111,Green\n",
+            "source3,,Teal\n",
+            "source3,565,Royal purple\n"
         ]
 
         self.assertEqual(expected_lines, lines)
@@ -399,68 +399,66 @@ class MyTestCase(unittest.TestCase):
 
     def test_everything_together2(self):
         main.CONFIG_FILE_NAME = "example_files/config_example2.ini"
-        config: configparser.ConfigParser = main.get_config_constants()
-        parsed_source: list[main.Row] = main.parse_csv(config["source"]["file_name"],
-                                                       config.getint("source", "header_row_num"),
-                                                       main.parse_ignored_rows(config["source"]["ignored_rows"]))
-        parsed_target: list[main.Row] = main.parse_csv(config["target"]["file_name"],
-                                                       config.getint("target", "header_row_num"),
-                                                       main.parse_ignored_rows(config["target"]["ignored_rows"]))
-        main.transfer_data(parsed_source, parsed_target, main.parse_target_columns(config),
-                           config["source"]["match_by"], config["target"]["match_by"],
-                           f'test_outputs/{config["output"]["unmatched_file_name"]}', config["output"]["dialect"],
-                           config["field_rules"])
-        main.write_csv(f'test_outputs/{config["output"]["file_name"]}', parsed_target,
-                       config["output"]["dialect"])
+        config = main.get_config_constants()
+        main.main()
 
-        with open(f'test_outputs/{config["output"]["file_name"]}') as f:
+        with open(f'{config["output"]["file_name"]}') as f:
             lines = f.readlines()
 
-        with open(f'test_outputs/{config["output"]["unmatched_file_name"]}') as f:
+        with open(f'{config["output"]["unmatched_file_name"]}') as f:
             unmatched_lines = f.readlines()
 
         expected_constants = {
             "defaults": {
                 "header_row_num": "0",
-                "ignored_rows": "-1"
+                "ignored_row(s)": "-1"
             },
-            "source": {
-                "file_name": "example_files/example3.csv",
+            "sources": {
+                "example3": "example_files/example3.csv",
+                "example": "example_files/example.csv"
+            },
+            "example3": {
                 "target_column(s)": "employment status,favorite color",
+                "column_name(s)": "",
                 "match_by": "social security",
+                "match_by_name(s)": "social security number",
                 "header_row_num": "1",
-                "ignored_rows": "0,6,5"
+                "ignored_row(s)": "0,6,5"
             },
-            "target": {
-                "file_name": "example_files/example.csv",
+            "example": {
                 "target_column(s)": "Employment Status,Favorite Color",
+                "column_name(s)": "employment status,favorite color",
                 "match_by": "Social Security Number",
+                "match_by_name(s)": "social security number",
                 "header_row_num": "0",
-                "ignored_rows": "-1"
+                "ignored_row(s)": "-1"
             },
             "output": {
-                "file_name": "output2.csv",
-                "unmatched_file_name": "unmatched2.csv",
+                "file_name": "test_outputs/output2.csv",
+                "unmatched_file_name": "test_outputs/unmatched2.csv",
                 "dialect": "unix"
             },
+            "source_rules": {},
             "field_rules": {
                 "employment status": r"^(([eE]|[uU]ne)mployed)$",
-                "social security": r"^\d+$"
+                "social security number": r"^\d+$"
             }
         }
 
         expected_lines = [
-            '"Name","Date of birth","Social Security Number","Employment Status","Favorite Color"\n',
-            '"John Smith","3/24/1989","123456","Employed","Red"\n',
-            '"Joe Bob","1/23/4567","987654321","Unemployed","Orange"\n',
-            '"Emily Wayne","5/31/2000","1234321","Unknown","Yellow"\n',
-            '"First Last","1/1/1970","234111","employed","Magenta"\n'
+            '"Source(s) found in","social security number","employment status","favorite color"\n',
+            '"example3","234111","employed","Magenta"\n',
+            '"example","123456","Employed","Red"\n',
+            '"example","987654321","Unemployed","Orange"\n'
         ]
 
         expected_unmatched_lines = [
-            '"employment status","favorite color","social security"\n',
-            '"employed","Teal",""\n',
-            '"","Red","1234321"\n',
+            '"Source(s) found in","social security","employment status","favorite color"\n',
+            '"example3","","employed","Teal"\n',
+            '"example3","1234321","","Red"\n',
+            '"Source(s) found in","Social Security Number","Employment Status","Favorite Color"\n',
+            '"example","1234321","Unknown","Yellow"\n',
+            '"example","234111","Unknown","Green"\n'
         ]
 
         self.assertEqual(expected_lines, lines)
