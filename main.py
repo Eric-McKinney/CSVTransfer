@@ -27,7 +27,7 @@ import sys
 from typing import Iterable
 
 # TODO: Add "rules" which data can be flagged by (e.g. only devices of this type should appear here)
-# TODO: Update documentation when done with all of the changes
+# TODO: Update documentation when done with all the changes
 
 # Custom type aliases for clarity
 Header = str
@@ -307,6 +307,7 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
 
         # attempt to find a match
         for out_row in output_copy:
+            # TODO: Turn the following into its own function which returns a bool to set found_match to
             for match in match_by:
                 if out_row[names_map[match]] == row[match]:
                     found_match = True
