@@ -291,6 +291,10 @@ class MyTestCase(unittest.TestCase):
             {"Name": "new_file", "Size": "1B", "Owner": "Simon Cowell", "Last Changed": "6/1/23", "Delete?": ""}
         ]
         source3: list[dict] = [
+            {"name": "Joe", "admin privileges": "y", "last logged in": "2 Sep 2019"},
+            {"name": "Brock", "admin privileges": "n", "last logged in": "5 Oct 2020"},
+            {"name": "Amy", "admin privileges": "n", "last logged in": "24 Feb 2009"},
+            {"name": "Diana", "admin privileges": "y", "last logged in": "18 Jun 2023"}
         ]
 
         source1_name = "source1"
@@ -298,7 +302,7 @@ class MyTestCase(unittest.TestCase):
         source3_name = "source3"
         names_map1: dict[str: str] = {"File Name": "Name", "File Size": "Size", "Marked For Deletion": "Delete?"}
         names_map2: dict[str: str] = {"Name": "Name", "Owner": "Owner", "Size": "Size", "Delete?": "Delete?"}
-        names_map3: dict[str: str] = {}
+        names_map3: dict[str: str] = {"name": "User", "admin privileges": "Admin?"}
         match_by1: list[str] = []
         match_by2: list[str] = ["Name"]
         match_by3: list[str] = []
@@ -317,16 +321,22 @@ class MyTestCase(unittest.TestCase):
             {"Source(s) found in": "source1", "Name": "abc.def", "Size": "300kB", "Delete?": "True"},
             {"Source(s) found in": "source1, source2", "Name": "important_data.csv", "Size": "20MB", "Delete?": "False",
              "Owner": "root"},
-            {"Source(s) found in": "source1, source2", "Name": "funny.jpg", "Size": "40MB", "Delete?": "False"},
+            {"Source(s) found in": "source1, source2", "Name": "funny.jpg", "Size": "40MB", "Delete?": "False",
+             "Owner": "me"},
             {"Source(s) found in": "source1", "Name": "info.txt", "Size": "10kB", "Delete?": "False"},
-            {"Source(s) found in": "source1, source2", "Name": "music.mp3", "Size": "400MB", "Delete?": "False"},
+            {"Source(s) found in": "source1, source2", "Name": "music.mp3", "Size": "400MB", "Delete?": "False",
+             "Owner": "you"},
             {"Source(s) found in": "source2", "Name": "proj.c", "Size": "89B", "Owner": "npp", "Delete?": "n"},
-            {"Source(s) found in": "source2", "Name": "new_file", "Size": "1B", "Owner": "Simon Cowell", "Delete?": ""}
+            {"Source(s) found in": "source2", "Name": "new_file", "Size": "1B", "Owner": "Simon Cowell", "Delete?": ""},
+            {"Source(s) found in": "source3", "User": "Joe", "Admin?": "y"},
+            {"Source(s) found in": "source3", "User": "Brock", "Admin?": "n"},
+            {"Source(s) found in": "source3", "User": "Amy", "Admin?": "n"},
+            {"Source(s) found in": "source3", "User": "Diana", "Admin?": "y"},
         ]
         expected_unmatched_lines: list[str] = [
-            "No unmatched data for source1 :)\n",
-            "No unmatched data for source2 :)\n",
-            "No unmatched data for source3 :)\n"
+            "source1 had no unmatched data :)\n",
+            "source2 had no unmatched data :)\n",
+            "source3 had no unmatched data :)\n"
         ]
 
         self.assertEqual(expected_output, output)
