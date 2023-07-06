@@ -26,8 +26,9 @@ import re
 import sys
 from typing import Iterable
 
-# TODO: Add "rules" which data can be flagged by (e.g. only devices of this type should appear here)
+# TODO: Add "rules" which data can be flagged by (e.g. only devices of this type should appear here) post data transfer
 # TODO: Update documentation when done with all the changes
+# TODO: Add reasons for not matching in unmatched file output
 
 # Custom type aliases for clarity
 Header = str
