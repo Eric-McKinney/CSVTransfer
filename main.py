@@ -58,6 +58,8 @@ def main(args: list[str] = None):
     if args is None:
         if len(sys.argv) > 1:
             args = sys.argv[1:]
+        else:
+            args = []
 
     if "--help" in args or "-h" in args:
         print(HELP_MSG)
@@ -83,7 +85,7 @@ def main(args: list[str] = None):
     for source in config["sources"]:
         print(f"Parsing {source}...", end="", flush=True)
         parsed_source: list[Row] = parse_csv(config["sources"][source], config.getint(source, "header_row_num"),
-                                             parse_ignored_rows(config["source"]["ignored_rows"]))
+                                             parse_ignored_rows(config[source]["ignored_row(s)"]))
         print("DONE", flush=True)
 
         print(f"Transferring {source}'s data...", end="", flush=True)
@@ -190,6 +192,15 @@ def map_columns_names(config: configparser.ConfigParser) -> dict[str: dict[Heade
 
         match_by: list[str] = config[source]["match_by"].split(",")
         match_by_names: list[str] = config[source]["match_by_name(s)"].split(",")
+
+        for names in [col_names, match_by_names]:
+            to_remove = []
+            for i, name in enumerate(names):
+                if name == "":
+                    to_remove.insert(0, i)
+
+            for idx in to_remove:
+                names.__delitem__(idx)
 
         cols_names_mapping[source] = {}
         for i, col in enumerate(match_by):
@@ -302,7 +313,11 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
             data_to_transfer[names_map[header]] = row[header]
 
         if regex is not None and not data_matches_regex(data_to_transfer, names_map, regex):
-            unmatched_data.append(data_to_transfer)
+            data = {"Source(s) found in": source_name}
+            for header in names_map:
+                data[header] = row[header]
+
+            unmatched_data.append(data)
             continue
 
         # attempt to find a match
@@ -361,29 +376,21 @@ def data_matches_regex(data: dict[Header: str], names_map: dict[Header: Header],
         if header not in names_map.values():  # if regex applies to a field not being transferred do nothing
             continue
 
-        # since regex matching is done based on headers from output we need to find corresponding source header
-        source_header: str = ""
-        for s_header in names_map:
-            o_header = names_map[s_header]
-            if header == o_header:
-                source_header = s_header
-                break
-
-        if source_header == "":  # if there was no corresponding source header (shouldn't be possible) we have an issue
+        if header == "":  # if there was no corresponding source header (shouldn't be possible) we have an issue
             print(f"Regex match failed: No source header for output header \"{header}\"", file=sys.stderr)
             return False
 
-        if re.search(pattern=regex[header], string=data[source_header]) is None:
+        if re.search(pattern=regex[header], string=data[header]) is None:
             return False
 
     return True
 
 
 def unify_headers(names_map: dict[str: dict[Header: Header]]) -> list[str]:
-    unified_headers: list[str] = []
+    unified_headers: list[str] = ["Source(s) found in"]
 
     for source in names_map:
-        for header in source.values():
+        for header in names_map[source].values():
             if header not in unified_headers:
                 unified_headers.append(header)
 
