@@ -263,10 +263,10 @@ class MyTestCase(unittest.TestCase):
         ]
         expected_strict_unmatched_lines: list[str] = [
             "source1 had no unmatched data :)\n",
-            "Source(s) found in,song,rating\n",
-            "source2,Alone Infection,9/10\n",
-            "source2,Requiem,10/10\n",
-            "source2,505,10/10\n"
+            "Source(s) found in,Reason it didn't match,song,rating\n",
+            "source2,Strict on and no match found,Alone Infection,9/10\n",
+            "source2,Strict on and no match found,Requiem,10/10\n",
+            "source2,Strict on and no match found,505,10/10\n"
         ]
 
         self.assertEqual(expected_output, output)
@@ -453,12 +453,13 @@ class MyTestCase(unittest.TestCase):
         ]
 
         expected_unmatched_lines = [
-            '"Source(s) found in","social security","employment status","favorite color"\n',
-            '"example3","","employed","Teal"\n',
-            '"example3","1234321","","Red"\n',
-            '"Source(s) found in","Social Security Number","Employment Status","Favorite Color"\n',
-            '"example","1234321","Unknown","Yellow"\n',
-            '"example","234111","Unknown","Green"\n'
+            '"Source(s) found in","Reason it didn\'t match","social security","employment status","favorite color"\n',
+            '"example3","Data didn\'t match regex/field_rule","","employed","Teal"\n',
+            '"example3","Data didn\'t match regex/field_rule","1234321","","Red"\n',
+            '"Source(s) found in","Reason it didn\'t match","Social Security Number","Employment Status",'
+            '"Favorite Color"\n',
+            '"example","Data didn\'t match regex/field_rule","1234321","Unknown","Yellow"\n',
+            '"example","Data didn\'t match regex/field_rule","234111","Unknown","Green"\n'
         ]
 
         self.assertEqual(expected_lines, lines)
