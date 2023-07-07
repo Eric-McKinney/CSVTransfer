@@ -28,7 +28,6 @@ from typing import Iterable
 
 # TODO: Add "rules" which data can be flagged by (e.g. only devices of this type should appear here) post data transfer
 # TODO: Update documentation when done with all the changes
-# TODO: Add reasons for not matching in unmatched file output
 
 # Custom type aliases for clarity
 Header = str
@@ -314,7 +313,7 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
             data_to_transfer[names_map[header]] = row[header]
 
         if regex is not None and not data_matches_regex(data_to_transfer, names_map, regex):
-            data = {"Source(s) found in": source_name}
+            data = {"Source(s) found in": source_name, "Reason it didn't match": "Data didn't match regex/field_rule"}
             for header in names_map:
                 data[header] = row[header]
 
@@ -345,7 +344,7 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
         if (not strict or first_source) and not found_match:
             output.append(data_to_transfer)
         elif unmatched_output not in [None, ""] and not found_match:
-            data = {"Source(s) found in": source_name}
+            data = {"Source(s) found in": source_name, "Reason it didn't match": "Strict on and no match found"}
             for header in names_map:
                 data[header] = row[header]
 
@@ -358,7 +357,7 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
             with open(unmatched_output, "a" if append else "w") as f:
                 f.write(f"{source_name} had no unmatched data :)\n")
         else:
-            headers: list[str] = ["Source(s) found in"]
+            headers: list[str] = ["Source(s) found in", "Reason it didn't match"]
             headers.extend(names_map.keys())
             write_csv(unmatched_output, headers, unmatched_data, dialect, append=append)
 
