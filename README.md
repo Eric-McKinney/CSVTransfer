@@ -222,3 +222,8 @@ dialect = excel
 
 [field_rules]
 ```
+
+# Feedback
+
+Feel free to give me feedback at ericmckinney@gmail.com or through GitHub.
+I'm always looking to improve and learn new things.
