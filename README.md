@@ -165,7 +165,8 @@ name. If left blank, no unmatched data is dumped.
 > The dialect to write the output csv file in. Valid dialects include unix,
 excel, and excel_tab. The default and the one you probably want is excel. The
 dialect only determines things like what to quote, line terminator, etc. More
-info can be found [here](https://docs.python.org/3/library/csv.html#csv.excel).
+info can be found in the
+[python csv library](https://docs.python.org/3/library/csv.html#csv.excel).
 
 ---
 ### field_rules section
