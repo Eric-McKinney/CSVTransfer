@@ -80,7 +80,7 @@ same as the name you put in the sources section. In this section there needs
 to be the following fields: target_column(s), column_name(s), match_by,
 match_by_name(s), header_row_num, and ignored_row(s). Descriptions for what each
 of these fields entails can be found below in 
-[Config File Fields](README.md#config-file-fields). All of these fields need
+[Config File Fields](#config-file-fields). All of these fields need
 values unless they appear in (and have values in) the defaults section.
 
 ### output section
