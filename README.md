@@ -1,20 +1,13 @@
 # CSVTransfer
 
 ## Project Description
-The purpose of this project is to enable the transfer of large amounts of 
-data from one csv to another. Specifically, any number of columns can be
-chosen to be moved, but just as many columns need to be chosen to be the
-destination of the data. The transfer is done according to another column
-from each file to "match by" so that data can be associated with other data.
-For example, you have two csvs which contain data about your personal data from
-two different music streaming services. The csvs are formatted differently,
-have different fields, different amounts of data, and different data in general.
-Say that one of the csvs has very thorough listening duration data that you want
-to move to the other file. In this case you would match the data by song name
-since it would be in both files in the same format, and it would be less likely
-to contain duplicate entries. Then you would transfer the listening duration 
-column. If this column didn't exist in the destination file, then it should be
-created before running the script.
+
+This purpose of this project is to enable the transfer of select data from an 
+arbitrary number of csv files into a new file. Data can be used to "match by" 
+effectively merging data which shares at least one match_by field with other 
+data. Regex filters can be applied to csv fields/columns. The data that does 
+not match these filters and other data considered unmatched can be output to 
+a file.
 
 ## Setup
 Download `main.py`, `config_template.ini`, and optionally this `README.md` for 
@@ -24,16 +17,16 @@ installed. After that you should be good to go.
 
 ## Usage
 For this script to be able to see and read the csv files they must be in the
-same directory as this script or in a subdirectory. Once you have your csvs
-where you want them, fill out the config file with at bare minimum the file
-names (or relative path if they're in a subdirectory), the target column(s), 
-and the column to match by for the source file and target file. All fields 
-names shown in the template should be present even if empty otherwise a 
-`KeyError` will occur. In the command prompt or shell (in the same directory 
-as main.py) do `py main.py` or `python3 main.py`.
+same directory this script is invoked in or in a subdirectory. Once you have 
+your csvs where you want them, fill out the config file (more on that below).
+In the command prompt or shell (in the same directory as main.py) do 
+`py main.py` or `python3 main.py` depending on your environment. Of course if
+you want to you can use the absolute path of the script to execute it elsewhere
+like so `python3 /absolute/path/to/main.py` or the same thing using `py` which
+depends on your system.
 
 ### Options
-Currently, the only options are `-h`, `--help`, and `--debug`.
+Currently, the only options are `-h`, `--help`, `--debug`, and `--strict`.
 
 **-h**, **--help**
 > Prints help message and terminates.
@@ -41,28 +34,72 @@ Currently, the only options are `-h`, `--help`, and `--debug`.
 **--debug**
 > Enables debug print statements.
 
+**--strict**
+> If data after the first source does not match at least one of the match_by
+fields then the data is considered unmatched as opposed to being appended to the
+output in its own row.
+
 ## Config File
 By default, the script uses `config_template.ini` for configuration. If you 
 want to use a config file by a different name, open `main.py` and change 
 the `CONFIG_FILE_NAME` variable accordingly. The `config_template.ini` file 
-has a few bits filled out already. Fill in the rest. If you don't, you'll be 
-prompted when you run `main.py` for the variables that are necessary for 
-the script to do what it needs to do, and they will be taken via stdin. Values
-taken this way will not be written to the config file.
+has a few bits filled out already. Fill in the rest as described below. 
 
-The config file has five sections: defaults, source, target, output, and 
-field_rules. The defaults section contains default values for the source and 
-target sections. These are filled out for you in the template. The source and 
-target sections are to further specify information about the two csv files that 
-will be a part of the data transfer. Everything in these sections need values 
-except the things that appear in the defaults section. The output section is 
-mostly just to name the output file, but you can also change the dialect to 
-write output csvs in. Excel is the default and is what I would recommend. 
-More about dialects below. You can also optionally give the name for a file 
-to dump data that could not be matched. Finally, the field_rules section is 
-a place where you can specify formats for data to be validated against via 
-regex. This is entirely optional. Data that does not match the given regex 
-for a given header will not be transferred and counts towards the unmatched data.
+## Config File Sections
+
+The config file is organized into sections: defaults, sources, output, 
+source_rules, and field_rules as well as some you will have to add.
+
+### defaults section
+
+The defaults section contains default values 
+for the sections you will add for each source. These are filled out for you 
+in the template. You can add more, but you will need to make sure to add them
+to the section for each source (with or without a value assigned to it).
+
+### sources section
+
+The sources section is where you list the various csv files to draw data from.
+Put the name of the source (whatever you want to call it) and assign it the
+path to the csv file (the path can be relative). The order in which you list
+sources determines their priority where the first source you put is the highest
+priority and the last source is the lowest priority. Sources are parsed and
+transferred in order of their priority. If data between sources collides (two
+sources have different values for the same row, column), then the higher priority
+source's data is put in the output. This is because sources whose data is matched
+to an existing row in the output will only fill in empty fields, so the first
+value used for a cell in the output will not be replaced. Once you have listed
+all sources you plan to use as well as the paths to the csv files, you need to
+make a section for each source by the same name you gave in this section.
+
+### section for each source
+
+Each source you plan to use and have listed in the sources section need a
+section to specify how they should be handled. The section name should be the
+same as the name you put in the sources section. In this section there needs
+to be the following fields: target_column(s), column_name(s), match_by,
+match_by_name(s), header_row_num, and ignored_row(s). Descriptions for what each
+of these fields entails can be found below in 
+[Config File Fields](#config-file-fields). All of these fields need
+values unless they appear in (and have values in) the defaults section.
+
+### output section
+The output section is mostly just to name the output file, but you can also 
+change the dialect to write output csvs in. Excel is the default and is what 
+I would recommend. More about dialects below. You can also optionally give 
+the name for a file to dump data that could not be matched. Unmatched data will
+only be dumped to that file if you give it a name.
+
+### source_rules
+
+WIP
+
+### field_rules
+
+The field_rules section is a place where you can specify formats for data to be 
+validated against using regex. This is entirely optional. Data that does not 
+match the given regex for a given header will not be transferred and counts 
+towards the unmatched data.
 
 ## Config File Fields
 
@@ -71,7 +108,7 @@ for a given header will not be transferred and counts towards the unmatched data
 > The number of the row (starting at 0) which contains the headers you want to
 use.
 
-**ignored_rows**
+**ignored_row(s)**
 > A comma separated list of numbers of rows to ignore while parsing, 
 transferring data, and putting data in the output file. Any negative value or
 out of bounds value effectively means nothing. In the template this value is
@@ -80,29 +117,37 @@ of the numbers does not matter. Data ignored this way does not contribute to
 the unmatched data.
 
 ---
-### source & target sections
-**file_name**
-> Name of the file to use. Can be a relative path to a file in a subdirectory.
+### section for each source
 
 **target_column(s)**
 > A comma separated list of the headers whose columns should be used in the data
-transfer. The number of headers given should be the same between source and 
-target. The order matters as the first header from the source will be matched to
-the first header for the target, and the same goes for the second, third, etc.
+transfer.
+
+**column_name(s)**
+> A comma separated list of the headers to be used in the output. The headers
+from the target_column(s) section are matched to these names based on the order
+they appear. If there are less column_name(s) than target_column(s) then the
+extra target_column(s) assume the same name in the output. Extra column_name(s)
+are not used.
 
 **match_by**
-> The header of the column to use for matching data during the transfer. The data
-in this column should be shared between the two files or at least match to some
-degree. Only data that can be matched to an item from this column in both files
-will be transferred. The data in this column should also ideally be unique. For
-example, a column of serial numbers would be good because serial numbers don't
-change in format like names do, and there likely won't be duplicates.
+> Functions in the same way that target_column(s) does, but headers listed here
+are also used to match data by when transferring. A match is attempted among data
+in the output at the time of transfer (data already transferred not including the
+current source). If a match is found, then data being transferred will only fill
+in empty fields in that row. If a match is not found, then data will be appended
+to the output unless `--strict` is used, in which case the data is considered
+unmatched. Headers listed in both target_column(s) and here are only put in the
+output once, but it's best to avoid doing this.
+
+**match_by_name(s)**
+> Functions in the same way as column_name(s), but for headers in match_by
 
 **header_row_num**
 > Same as in the defaults section, but if a value is provided here it will
 override the value given in defaults.
 
-**ignored_rows**
+**ignored_row(s)**
 > See above.
 
 ---
@@ -120,13 +165,17 @@ name. If left blank, no unmatched data is dumped.
 > The dialect to write the output csv file in. Valid dialects include unix,
 excel, and excel_tab. The default and the one you probably want is excel. The
 dialect only determines things like what to quote, line terminator, etc. More
-info can be found [here](https://docs.python.org/3/library/csv.html#csv.excel).
+info can be found in the
+[python csv library](https://docs.python.org/3/library/csv.html#csv.excel).
 
 ---
 ### field_rules section
 > Optionally put regex to match fields by. To see what types of regex syntax
 are supported, see the
 [python regex library documentation](https://docs.python.org/3/library/re.html).
+To create a rule, put the header that will appear in the output and assign it
+the regex you want to filter by. Data that does not match this regex will not
+be transferred and will count towards the unmatched data.
 
 Example:
 ```ini
@@ -141,27 +190,35 @@ IPv4 address = ^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$
 ```ini
 [defaults]
 header_row_num = 0
-ignored_rows = -1
+ignored_row(s) = -1
 
-[source]
-file_name = example_files/example.csv
+[sources]
+source1 = example_files/example.csv
+source3 = example_files/example3.csv
+
+[source1]
 target_column(s) = Favorite Color
+column_name(s) = favorite color
 match_by = Social Security Number
+match_by_name(s) = social security
 header_row_num =
-ignored_rows =
+ignored_row(s) =
 
-[target]
-file_name = example_files/example3.csv
+[source3]
 target_column(s) = favorite color
+column_name(s) =
 match_by = social security
+match_by_name(s) =
 header_row_num = 1
-ignored_rows = 0,5
+ignored_row(s) = 0,5
 
 [output]
-file_name = output.csv
+file_name = test_outputs/output.csv
 unmatched_file_name =
 # valid dialects: unix, excel, excel_tab
 dialect = excel
+
+[source_rules]
 
 [field_rules]
 ```

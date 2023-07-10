@@ -1,7 +1,6 @@
 import configparser
 import unittest
 import main
-import sys
 
 
 class MyTestCase(unittest.TestCase):
@@ -81,27 +80,34 @@ class MyTestCase(unittest.TestCase):
         expected_constants: dict = {
             "defaults": {
                 "header_row_num": "0",
-                "ignored_rows": "-1"
+                "ignored_row(s)": "-1"
             },
-            "source": {
-                "file_name": "example_files/example.csv",
+            "sources": {
+                "source1": "example_files/example.csv",
+                "source3": "example_files/example3.csv",
+            },
+            "source1": {
                 "target_column(s)": "Favorite Color",
+                "column_name(s)": "favorite color",
                 "match_by": "Social Security Number",
+                "match_by_name(s)": "social security",
                 "header_row_num": "0",
-                "ignored_rows": "-1"
+                "ignored_row(s)": "-1"
             },
-            "target": {
-                "file_name": "example_files/example3.csv",
+            "source3": {
                 "target_column(s)": "favorite color",
+                "column_name(s)": "",
                 "match_by": "social security",
+                "match_by_name(s)": "",
                 "header_row_num": "1",
-                "ignored_rows": "0,5"
+                "ignored_row(s)": "0,5"
             },
             "output": {
-                "file_name": "output.csv",
+                "file_name": "test_outputs/output.csv",
                 "unmatched_file_name": "",
                 "dialect": "excel"
             },
+            "source_rules": {},
             "field_rules": {}
         }
 
@@ -112,62 +118,23 @@ class MyTestCase(unittest.TestCase):
         with self.assertRaises(SystemExit):
             main.get_config_constants()
 
-    def test_get_constants_from_stdin(self):  # Give same inputs for the function call and the test inputs
-        redirection_file = "test_outputs/constants_to_redirect_to_stdin.txt"
-        with open(redirection_file, "w") as f:
-            for _ in range(2):
-                f.write("source_name\n")
-                f.write("target_col\n")
-                f.write("match\n")
-                f.write("1\n")
-                f.write("0\n")
-
-                f.write("target_name\n")
-                f.write("col_target\n")
-                f.write("by\n")
-                f.write("0\n")
-                f.write("1\n")
-
-                f.write("out.csv\n")
-                f.write("out_dialect\n")
-
-        temp_stdin = sys.stdin
-        sys.stdin = open(redirection_file)
+    def test_get_constants_missing_constants(self):  # Give same inputs for the function call and the test inputs
         main.CONFIG_FILE_NAME = "example_files/empty_config.ini"
 
-        config: configparser.ConfigParser = main.get_config_constants()
+        with self.assertRaises(SystemExit):
+            main.get_config_constants()
 
-        expected_constants: dict = {
-            "defaults": {
-                "header_row_num": "",
-                "ignored_rows": ""
-            },
-            "source": {
-                "file_name": input(),
-                "target_column(s)": input(),
-                "match_by": input(),
-                "header_row_num": input(),
-                "ignored_rows": input()
-            },
-            "target": {
-                "file_name": input(),
-                "target_column(s)": input(),
-                "match_by": input(),
-                "header_row_num": input(),
-                "ignored_rows": input()
-            },
-            "output": {
-                "file_name": input(),
-                "unmatched_file_name": "",
-                "dialect": input()
-            },
-            "field_rules": {}
-        }
+    def test_get_constants_missing_constants2(self):
+        main.CONFIG_FILE_NAME = "example_files/empty_config2.ini"
 
-        sys.stdin.close()
-        sys.stdin = temp_stdin
+        with self.assertRaises(SystemExit):
+            main.get_config_constants()
 
-        self.assertConfigEquals(expected_constants, config)
+    def test_get_constants_missing_constants3(self):
+        main.CONFIG_FILE_NAME = "example_files/empty_config3.ini"
+
+        with self.assertRaises(SystemExit):
+            main.get_config_constants()
 
     def test_write_to_csv(self):
         sample_data: list[main.Row] = [
@@ -175,7 +142,9 @@ class MyTestCase(unittest.TestCase):
             {"Name": "Test", "Occupation": "None"},
             {"Name": "Batman", "Occupation": "Hero"}
         ]
-        main.write_csv("test_outputs/test_output.csv", sample_data, dialect="excel")
+        headers: list[str] = ["Name", "Occupation"]
+
+        main.write_csv("test_outputs/test_output.csv", headers, sample_data, dialect="excel")
 
         with open("test_outputs/test_output.csv") as f:
             lines = f.readlines()
@@ -190,14 +159,7 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(expected_lines, lines)
 
     def test_transfer_data(self):
-        source: list[main.Row] = [
-            {"x": "1", "x^2": "1", "x^3": "1"},
-            {"x": "2", "x^2": "4", "x^3": "8"},
-            {"x": "3", "x^2": "9", "x^3": "27"},
-            {"x": "4", "x^2": "16", "x^3": "64"},
-            {"x": "5", "x^2": "25", "x^3": "125"}
-        ]
-        target: list[main.Row] = [
+        source1: list[main.Row] = [
             {"t": "1", "func1": "2", "func2": "4"},
             {"t": "2", "func1": "4", "func2": ""},
             {"t": "3", "func1": "6", "func2": "88"},
@@ -206,69 +168,114 @@ class MyTestCase(unittest.TestCase):
             {"t": "6", "func1": "13", "func2": ""},
             {"t": "7", "func1": "19", "func2": "2"}
         ]
-        target_columns: dict[str: str] = {"x^2": "func2"}
-        source_match_by: str = "x"
-        target_match_by: str = "t"
+        source2: list[main.Row] = [
+            {"x": "1", "x^2": "1", "x^3": "1"},
+            {"x": "2", "x^2": "4", "x^3": "8"},
+            {"x": "3", "x^2": "9", "x^3": "27"},
+            {"x": "4", "x^2": "16", "x^3": "64"},
+            {"x": "5", "x^2": "25", "x^3": "125"}
+        ]
+        source1_name = "source1"
+        source2_name = "source2"
+        names_map1: dict[str: str] = {"t": "t", "func1": "func1", "func2": "func2"}
+        names_map2: dict[str: str] = {"x": "t", "x^2": "func1", "x^3": "func2"}
+        match_by1: list[str] = []
+        match_by2: list[str] = ["x"]
 
-        main.transfer_data(source, target, target_columns, source_match_by, target_match_by)
+        output = []
 
-        expected_target = [
-            {"t": "1", "func1": "2", "func2": "1"},
-            {"t": "2", "func1": "4", "func2": "4"},
-            {"t": "3", "func1": "6", "func2": "9"},
-            {"t": "4", "func1": "8", "func2": "16"},
-            {"t": "5", "func1": "10", "func2": "25"},
-            {"t": "6", "func1": "13", "func2": ""},
-            {"t": "7", "func1": "19", "func2": "2"}
+        main.transfer_data(source1_name, source1, output, names_map1, match_by1)
+        main.transfer_data(source2_name, source2, output, names_map2, match_by2)
+
+        expected_output = [
+            {"Source(s) found in": "source1, source2", "t": "1", "func1": "2", "func2": "4"},
+            {"Source(s) found in": "source1, source2", "t": "2", "func1": "4", "func2": "8"},
+            {"Source(s) found in": "source1, source2", "t": "3", "func1": "6", "func2": "88"},
+            {"Source(s) found in": "source1, source2", "t": "4", "func1": "8", "func2": "64"},
+            {"Source(s) found in": "source1, source2", "t": "5", "func1": "10", "func2": "3"},
+            {"Source(s) found in": "source1", "t": "6", "func1": "13", "func2": ""},
+            {"Source(s) found in": "source1", "t": "7", "func1": "19", "func2": "2"}
         ]
 
-        self.assertEqual(expected_target, target)
+        self.assertEqual(expected_output, output)
 
     def test_transfer_data2(self):
-        source: list[main.Row] = [
+        source1: list[main.Row] = [
             {"Song": "Power Slam", "Rating": "8/10"},
             {"Song": "Mirror of the World", "Rating": "9/10"},
             {"Song": "Freesia", "Rating": "10/10"},
             {"Song": "Nobody", "Rating": "10/10"},
             {"Song": "HEAVY DAY", "Rating": "11/10"}
         ]
-        target: list[main.Row] = [
+        source2: list[main.Row] = [
             {"song": "Alone Infection", "rating": "9/10"},
             {"song": "Requiem", "rating": "10/10"},
             {"song": "HEAVY DAY", "rating": "9/10"},
             {"song": "505", "rating": "10/10"}
         ]
-        target_columns: dict[str: str] = {"Rating": "rating"}
-        source_match_by: str = "Song"
-        target_match_by: str = "song"
-        unmatched_out_name: str = "test_outputs/unmatched_transfer2.csv"
+        source1_name = "source1"
+        source2_name = "source2"
+        names_map1: dict[str: str] = {"Song": "Song", "Rating": "Rating"}
+        names_map2: dict[str: str] = {"song": "Song", "rating": "Rating"}
+        match_by1: list[str] = []
+        match_by2: list[str] = ["song"]
 
-        main.transfer_data(source, target, target_columns, source_match_by, target_match_by,
-                           unmatched_output=unmatched_out_name, dialect="excel")
+        output = []
+        strict_output = []
+
+        unmatched_out_name: str = "test_outputs/unmatched_transfer2.csv"
+        unmatched_out_name2: str = "test_outputs/unmatched_transfer2_strict.csv"
+
+        main.transfer_data(source1_name, source1, output, names_map1, match_by1, unmatched_output=unmatched_out_name)
+        main.transfer_data(source2_name, source2, output, names_map2, match_by2, unmatched_output=unmatched_out_name)
+
+        main.transfer_data(source1_name, source1, strict_output, names_map1, match_by1,
+                           unmatched_output=unmatched_out_name2, strict=True)
+        main.transfer_data(source2_name, source2, strict_output, names_map2, match_by2,
+                           unmatched_output=unmatched_out_name2, strict=True)
 
         with open(unmatched_out_name) as f:
             unmatched_lines: list[str] = f.readlines()
+        with open(unmatched_out_name2) as f:
+            strict_unmatched_lines: list[str] = f.readlines()
 
-        expected_target = [
-            {"song": "Alone Infection", "rating": "9/10"},
-            {"song": "Requiem", "rating": "10/10"},
-            {"song": "HEAVY DAY", "rating": "11/10"},
-            {"song": "505", "rating": "10/10"}
+        expected_output = [
+            {"Source(s) found in": "source1", "Song": "Power Slam", "Rating": "8/10"},
+            {"Source(s) found in": "source1", "Song": "Mirror of the World", "Rating": "9/10"},
+            {"Source(s) found in": "source1", "Song": "Freesia", "Rating": "10/10"},
+            {"Source(s) found in": "source1", "Song": "Nobody", "Rating": "10/10"},
+            {"Source(s) found in": "source1, source2", "Song": "HEAVY DAY", "Rating": "11/10"},
+            {"Source(s) found in": "source2", "Song": "Alone Infection", "Rating": "9/10"},
+            {"Source(s) found in": "source2", "Song": "Requiem", "Rating": "10/10"},
+            {"Source(s) found in": "source2", "Song": "505", "Rating": "10/10"}
+        ]
+        expected_strict_output = [
+            {"Source(s) found in": "source1", "Song": "Power Slam", "Rating": "8/10"},
+            {"Source(s) found in": "source1", "Song": "Mirror of the World", "Rating": "9/10"},
+            {"Source(s) found in": "source1", "Song": "Freesia", "Rating": "10/10"},
+            {"Source(s) found in": "source1", "Song": "Nobody", "Rating": "10/10"},
+            {"Source(s) found in": "source1, source2", "Song": "HEAVY DAY", "Rating": "11/10"}
         ]
 
         expected_unmatched_lines: list[str] = [
-            "Rating,Song\n",
-            "8/10,Power Slam\n",
-            "9/10,Mirror of the World\n",
-            "10/10,Freesia\n",
-            "10/10,Nobody\n"
+            "source1 had no unmatched data :)\n",
+            "source2 had no unmatched data :)\n"
+        ]
+        expected_strict_unmatched_lines: list[str] = [
+            "source1 had no unmatched data :)\n",
+            "Source(s) found in,Reason it didn't match,song,rating\n",
+            "source2,Strict on and no match found,Alone Infection,9/10\n",
+            "source2,Strict on and no match found,Requiem,10/10\n",
+            "source2,Strict on and no match found,505,10/10\n"
         ]
 
-        self.assertEqual(expected_target, target)
+        self.assertEqual(expected_output, output)
         self.assertEqual(expected_unmatched_lines, unmatched_lines)
+        self.assertEqual(expected_strict_output, strict_output)
+        self.assertEqual(expected_strict_unmatched_lines, strict_unmatched_lines)
 
     def test_transfer_data3(self):
-        source: list[dict] = [
+        source1: list[dict] = [
             {"File Name": "abc.def", "File Format": "def", "File Size": "300kB", "Marked For Deletion": "True"},
             {"File Name": "important_data.csv", "File Format": "csv", "File Size": "20MB",
              "Marked For Deletion": "False"},
@@ -276,90 +283,115 @@ class MyTestCase(unittest.TestCase):
             {"File Name": "info.txt", "File Format": "txt", "File Size": "10kB", "Marked For Deletion": "False"},
             {"File Name": "music.mp3", "File Format": "mp3", "File Size": "400MB", "Marked For Deletion": "False"}
         ]
-        target: list[dict] = [
+        source2: list[dict] = [
             {"Name": "proj.c", "Size": "89B", "Owner": "npp", "Last Changed": "5/30/23", "Delete?": "n"},
             {"Name": "funny.jpg", "Size": "500TB", "Owner": "me", "Last Changed": "1/20/23", "Delete?": ""},
             {"Name": "music.mp3", "Size": "0B", "Owner": "you", "Last Changed": "3/2/03", "Delete?": ""},
             {"Name": "important_data.csv", "Size": "40GB", "Owner": "root", "Last Changed": "2/2/20", "Delete?": ""},
             {"Name": "new_file", "Size": "1B", "Owner": "Simon Cowell", "Last Changed": "6/1/23", "Delete?": ""}
         ]
-        target_columns: dict[str: str] = {"File Size": "Size", "Marked For Deletion": "Delete?"}
-        source_match_by: str = "File Name"
-        target_match_by: str = "Name"
+        source3: list[dict] = [
+            {"name": "Joe", "admin privileges": "y", "last logged in": "2 Sep 2019"},
+            {"name": "Brock", "admin privileges": "n", "last logged in": "5 Oct 2020"},
+            {"name": "Amy", "admin privileges": "n", "last logged in": "24 Feb 2009"},
+            {"name": "Diana", "admin privileges": "y", "last logged in": "18 Jun 2023"}
+        ]
+
+        source1_name = "source1"
+        source2_name = "source2"
+        source3_name = "source3"
+        names_map1: dict[str: str] = {"File Name": "Name", "File Size": "Size", "Marked For Deletion": "Delete?"}
+        names_map2: dict[str: str] = {"Name": "Name", "Owner": "Owner", "Size": "Size", "Delete?": "Delete?"}
+        names_map3: dict[str: str] = {"name": "User", "admin privileges": "Admin?"}
+        match_by1: list[str] = []
+        match_by2: list[str] = ["Name"]
+        match_by3: list[str] = []
         unmatched_out_name = "test_outputs/unmatched_transfer3.csv"
 
-        main.transfer_data(source, target, target_columns, source_match_by, target_match_by, unmatched_out_name)
+        output = []
+
+        main.transfer_data(source1_name, source1, output, names_map1, match_by1, unmatched_output=unmatched_out_name)
+        main.transfer_data(source2_name, source2, output, names_map2, match_by2, unmatched_output=unmatched_out_name)
+        main.transfer_data(source3_name, source3, output, names_map3, match_by3, unmatched_output=unmatched_out_name)
 
         with open(unmatched_out_name) as f:
             unmatched_lines: list[str] = f.readlines()
 
-        expected_target: list[dict] = [
-            {"Name": "proj.c", "Size": "89B", "Owner": "npp", "Last Changed": "5/30/23", "Delete?": "n"},
-            {"Name": "funny.jpg", "Size": "40MB", "Owner": "me", "Last Changed": "1/20/23", "Delete?": "False"},
-            {"Name": "music.mp3", "Size": "400MB", "Owner": "you", "Last Changed": "3/2/03", "Delete?": "False"},
-            {"Name": "important_data.csv", "Size": "20MB", "Owner": "root", "Last Changed": "2/2/20",
-             "Delete?": "False"},
-            {"Name": "new_file", "Size": "1B", "Owner": "Simon Cowell", "Last Changed": "6/1/23", "Delete?": ""}
+        expected_output: list[dict] = [
+            {"Source(s) found in": "source1", "Name": "abc.def", "Size": "300kB", "Delete?": "True"},
+            {"Source(s) found in": "source1, source2", "Name": "important_data.csv", "Size": "20MB", "Delete?": "False",
+             "Owner": "root"},
+            {"Source(s) found in": "source1, source2", "Name": "funny.jpg", "Size": "40MB", "Delete?": "False",
+             "Owner": "me"},
+            {"Source(s) found in": "source1", "Name": "info.txt", "Size": "10kB", "Delete?": "False"},
+            {"Source(s) found in": "source1, source2", "Name": "music.mp3", "Size": "400MB", "Delete?": "False",
+             "Owner": "you"},
+            {"Source(s) found in": "source2", "Name": "proj.c", "Size": "89B", "Owner": "npp", "Delete?": "n"},
+            {"Source(s) found in": "source2", "Name": "new_file", "Size": "1B", "Owner": "Simon Cowell", "Delete?": ""},
+            {"Source(s) found in": "source3", "User": "Joe", "Admin?": "y"},
+            {"Source(s) found in": "source3", "User": "Brock", "Admin?": "n"},
+            {"Source(s) found in": "source3", "User": "Amy", "Admin?": "n"},
+            {"Source(s) found in": "source3", "User": "Diana", "Admin?": "y"},
         ]
         expected_unmatched_lines: list[str] = [
-            "File Size,Marked For Deletion,File Name\n",
-            "300kB,True,abc.def\n",
-            "10kB,False,info.txt\n"
+            "source1 had no unmatched data :)\n",
+            "source2 had no unmatched data :)\n",
+            "source3 had no unmatched data :)\n"
         ]
 
-        self.assertEqual(expected_target, target)
+        self.assertEqual(expected_output, output)
         self.assertEqual(expected_unmatched_lines, unmatched_lines)
 
     def test_everything_together(self):
         main.CONFIG_FILE_NAME = "example_files/config_example.ini"
-        config: configparser.ConfigParser = main.get_config_constants()
-        parsed_source: list[main.Row] = main.parse_csv(config["source"]["file_name"],
-                                                       config.getint("source", "header_row_num"),
-                                                       main.parse_ignored_rows(config["source"]["ignored_rows"]))
-        parsed_target: list[main.Row] = main.parse_csv(config["target"]["file_name"],
-                                                       config.getint("target", "header_row_num"),
-                                                       main.parse_ignored_rows(config["target"]["ignored_rows"]))
-        main.transfer_data(parsed_source, parsed_target, main.parse_target_columns(config),
-                           config["source"]["match_by"], config["target"]["match_by"])
-        main.write_csv(f'test_outputs/{config["output"]["file_name"]}', parsed_target,
-                       config["output"]["dialect"])
+        config = main.get_config_constants()
+        main.main()
 
-        with open(f'test_outputs/{config["output"]["file_name"]}') as f:
+        with open(f'{config["output"]["file_name"]}') as f:
             lines = f.readlines()
 
         expected_constants = {
             "defaults": {
                 "header_row_num": "0",
-                "ignored_rows": "-1"
+                "ignored_row(s)": "-1"
             },
-            "source": {
-                "file_name": "example_files/example.csv",
+            "sources": {
+                "source1": "example_files/example.csv",
+                "source3": "example_files/example3.csv",
+            },
+            "source1": {
                 "target_column(s)": "Favorite Color",
+                "column_name(s)": "favorite color",
                 "match_by": "Social Security Number",
+                "match_by_name(s)": "social security",
                 "header_row_num": "0",
-                "ignored_rows": "-1"
+                "ignored_row(s)": "-1"
             },
-            "target": {
-                "file_name": "example_files/example3.csv",
+            "source3": {
                 "target_column(s)": "favorite color",
+                "column_name(s)": "",
                 "match_by": "social security",
+                "match_by_name(s)": "",
                 "header_row_num": "1",
-                "ignored_rows": "0,5"
+                "ignored_row(s)": "0,5"
             },
             "output": {
-                "file_name": "output.csv",
+                "file_name": "test_outputs/output.csv",
                 "unmatched_file_name": "",
                 "dialect": "excel"
             },
+            "source_rules": {},
             "field_rules": {}
         }
 
         expected_lines = [
-            "social security,d.o.b,\"last name, first name\",employment status,favorite color,hobbies,comments\n",
-            ",,\"Bob, Joe\",employed,Teal,Tennis,\n",
-            "1234321,5/31/2000,\"Wayne, Emily\",,Yellow,,No comment\n",
-            "234111,1/1/1970,\"Last, First\",employed,Green,Deliberate misinformation,Mr. Unix Epoch\n",
-            "565,,,employed,Royal purple,No hobby,\n"
+            "Source(s) found in,social security,favorite color\n",
+            "source1,123456,Red\n",
+            "source1,987654321,Orange\n",
+            "\"source1, source3\",1234321,Yellow\n",
+            "\"source1, source3\",234111,Green\n",
+            "source3,,Teal\n",
+            "source3,565,Royal purple\n"
         ]
 
         self.assertEqual(expected_lines, lines)
@@ -367,68 +399,67 @@ class MyTestCase(unittest.TestCase):
 
     def test_everything_together2(self):
         main.CONFIG_FILE_NAME = "example_files/config_example2.ini"
-        config: configparser.ConfigParser = main.get_config_constants()
-        parsed_source: list[main.Row] = main.parse_csv(config["source"]["file_name"],
-                                                       config.getint("source", "header_row_num"),
-                                                       main.parse_ignored_rows(config["source"]["ignored_rows"]))
-        parsed_target: list[main.Row] = main.parse_csv(config["target"]["file_name"],
-                                                       config.getint("target", "header_row_num"),
-                                                       main.parse_ignored_rows(config["target"]["ignored_rows"]))
-        main.transfer_data(parsed_source, parsed_target, main.parse_target_columns(config),
-                           config["source"]["match_by"], config["target"]["match_by"],
-                           f'test_outputs/{config["output"]["unmatched_file_name"]}', config["output"]["dialect"],
-                           config["field_rules"])
-        main.write_csv(f'test_outputs/{config["output"]["file_name"]}', parsed_target,
-                       config["output"]["dialect"])
+        config = main.get_config_constants()
+        main.main()
 
-        with open(f'test_outputs/{config["output"]["file_name"]}') as f:
+        with open(f'{config["output"]["file_name"]}') as f:
             lines = f.readlines()
 
-        with open(f'test_outputs/{config["output"]["unmatched_file_name"]}') as f:
+        with open(f'{config["output"]["unmatched_file_name"]}') as f:
             unmatched_lines = f.readlines()
 
         expected_constants = {
             "defaults": {
                 "header_row_num": "0",
-                "ignored_rows": "-1"
+                "ignored_row(s)": "-1"
             },
-            "source": {
-                "file_name": "example_files/example3.csv",
+            "sources": {
+                "example3": "example_files/example3.csv",
+                "example": "example_files/example.csv"
+            },
+            "example3": {
                 "target_column(s)": "employment status,favorite color",
+                "column_name(s)": "",
                 "match_by": "social security",
+                "match_by_name(s)": "social security number",
                 "header_row_num": "1",
-                "ignored_rows": "0,6,5"
+                "ignored_row(s)": "0,6,5"
             },
-            "target": {
-                "file_name": "example_files/example.csv",
+            "example": {
                 "target_column(s)": "Employment Status,Favorite Color",
+                "column_name(s)": "employment status,favorite color",
                 "match_by": "Social Security Number",
+                "match_by_name(s)": "social security number",
                 "header_row_num": "0",
-                "ignored_rows": "-1"
+                "ignored_row(s)": "-1"
             },
             "output": {
-                "file_name": "output2.csv",
-                "unmatched_file_name": "unmatched2.csv",
+                "file_name": "test_outputs/output2.csv",
+                "unmatched_file_name": "test_outputs/unmatched2.csv",
                 "dialect": "unix"
             },
+            "source_rules": {},
             "field_rules": {
                 "employment status": r"^(([eE]|[uU]ne)mployed)$",
-                "social security": r"^\d+$"
+                "social security number": r"^\d+$"
             }
         }
 
         expected_lines = [
-            '"Name","Date of birth","Social Security Number","Employment Status","Favorite Color"\n',
-            '"John Smith","3/24/1989","123456","Employed","Red"\n',
-            '"Joe Bob","1/23/4567","987654321","Unemployed","Orange"\n',
-            '"Emily Wayne","5/31/2000","1234321","Unknown","Yellow"\n',
-            '"First Last","1/1/1970","234111","employed","Magenta"\n'
+            '"Source(s) found in","social security number","employment status","favorite color"\n',
+            '"example3","234111","employed","Magenta"\n',
+            '"example","123456","Employed","Red"\n',
+            '"example","987654321","Unemployed","Orange"\n'
         ]
 
         expected_unmatched_lines = [
-            '"employment status","favorite color","social security"\n',
-            '"employed","Teal",""\n',
-            '"","Red","1234321"\n',
+            '"Source(s) found in","Reason it didn\'t match","social security","employment status","favorite color"\n',
+            '"example3","Data didn\'t match regex/field_rule","","employed","Teal"\n',
+            '"example3","Data didn\'t match regex/field_rule","1234321","","Red"\n',
+            '"Source(s) found in","Reason it didn\'t match","Social Security Number","Employment Status",'
+            '"Favorite Color"\n',
+            '"example","Data didn\'t match regex/field_rule","1234321","Unknown","Yellow"\n',
+            '"example","Data didn\'t match regex/field_rule","234111","Unknown","Green"\n'
         ]
 
         self.assertEqual(expected_lines, lines)
