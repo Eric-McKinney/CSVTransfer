@@ -3,21 +3,19 @@ __author__ = "Eric McKinney"
 """
 Project Description
 
-This script will transfer data from one csv to another into a new file. Any number of columns to transfer may be given.
-Only one column from each csv can be used to match by, however. This "matching" is necessary because the transfer might
-not just be a copy-paste of a column, rather the data might be in a different order or might not have the same number of
-rows.
+This script transfers select data from an arbitrary number of csv files into a new file. Data can be used to "match by"
+effectively merging data which shares at least one "match by" field with other data. Regex filters can be applied to csv
+fields/columns. The data that does not match these filters and other data considered unmatched can be output to a file.
 
 
 Usage
 
-First, before running this script make sure that the two csv files you want to operate on are in the same directory as
-this script or in a subdirectory. Then make sure you have a config file even if none of the variables have values. An
-example config file can be seen in config_example.ini in the example_files directory in GitHub. Once you have a config, 
-file you can run this script by typing "py main.py" or "python3 main.py" in the command prompt or shell (while in the 
-same directory). If not provided in the config file, necessary values will be taken via stdin when prompted. Values 
-entered this way will not be saved to the config file. The name of the config file that this script uses can be changed 
-by changing the variable CONFIG_FILE_NAME below.
+All of this script's behavior hinges on a config file. The format for said config file can be found in the README 
+(https://github.com/Eric-McKinney/CSVTransfer/blob/main/README.md). By default the config file name that this script
+looks for is config_template.ini, but this can be changed by changing the CONFIG_FILE_NAME variable below. Once you have
+a config file, ensure that the csv files you want to use are within the directory you use this script in and that the 
+file paths given in the config file are valid. To run this script enter "python3 main.py" or "py main.py" depending on 
+your environment.
 """
 import configparser
 import csv
@@ -40,14 +38,14 @@ HELP_MSG = """USAGE
 
 python3 main.py [OPTION]
 py main.py [OPTION]
-\tEnsure that both files are in the same directory as this script or a subdirectory (use relative path).
-\tSee README for more extensive detail.
+\tEnsure that both files are in the same directory as this script or a subdirectory (use relative path in config file).
+\tSee README for more extensive detail. (https://github.com/Eric-McKinney/CSVTransfer/blob/main/README.md)
 
 OPTIONS
 \t--debug
 \t\tEnables debug print statements
 \t-h, --help
-\t\tPrints help message and terminates
+\t\tPrints this help message and terminates
 \t--strict
 \t\tIf data after the first source does not match in at least one of the match_by fields, then the data is considered
 \t\tunmatched as opposed to being appended to the output in its own row
@@ -55,6 +53,14 @@ OPTIONS
 
 
 def main(args: list[str] = None):
+    """
+    Runs this script by first parsing args which can be given as a list of strings or via command line, loads info from
+    config file, checks validity of file paths, parses and transfers data from each csv one by one, and finally writes
+    the output to a file.
+
+    :param args: Arguments given by a list of strings (can be provided via command line instead)
+    :return:
+    """
     if args is None:
         if len(sys.argv) > 1:
             args = sys.argv[1:]
@@ -104,10 +110,10 @@ def main(args: list[str] = None):
 def valid_file_names(file_names: Iterable[str]) -> bool:
     """
     Determines if file names in config file are valid. File names should be relative paths of files that are within the
-    current working directory or a subdirectory. (e.g. file_name, ./file_name, ./subdir/file_name).
+    current working directory or a subdirectory. (e.g. file_name, ./file_name, ./subdir/file_name, subdir/file_name).
 
     :param file_names: List of file names from config file
-    :return: True if valid, false if not valid
+    :return: True if all are valid, false if any are not valid
     """
 
     for file in file_names:
@@ -176,13 +182,15 @@ def get_config_constants() -> configparser.ConfigParser:
 
 def map_columns_names(config: configparser.ConfigParser) -> dict[str: dict[Header: Header]]:
     """
-    Parses the comma separated lists of target columns, match by from the config file into a dictionary where headers
-    from both target columns and match by are mapped to new names given by column names and match by names. If there are
-    a different number of headers than names, then names are used up until they run out or there are no more headers.
-    Once names run out, headers will be mapped to themselves as new names. Match by are put before target columns.
+    Parses the comma separated lists of target_column(s), match_by, column_name(s), and match_by_name(s) from the config
+    file into a dictionary where headers from both target_column(s) and match_by are mapped to new names given by
+    column_name(s) and match_by_name(s). This is done for each source. If there are a different number of headers than
+    names, then names are used up until they run out or there are no more headers. Once names run out, headers will be
+    mapped to themselves as new names. The headers from match by are put before the headers from target columns.
 
     :param config: Parsed config file
-    :return: Dictionary with source target column(s) as keys w/corresponding columns from target file as values
+    :return: Dictionary with keys for each source containing a dictionary of headers and their corresponding name for
+             the output file
     """
     cols_names_mapping: dict[str: dict[Header: Header]] = {}
 
@@ -193,6 +201,7 @@ def map_columns_names(config: configparser.ConfigParser) -> dict[str: dict[Heade
         match_by: list[str] = config[source]["match_by"].split(",")
         match_by_names: list[str] = config[source]["match_by_name(s)"].split(",")
 
+        # remove all empty strings from the names (happens when values are not given in config file)
         for names in [col_names, match_by_names]:
             to_remove = []
             for i, name in enumerate(names):
@@ -276,16 +285,15 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
                   regex: dict[Header: str] = None, strict: bool = False) -> None:
     """
     Moves data from columns in the source whose headers appear in names_map to the output under the corresponding header
-    name that appear in the names_map. A match of the data transferred this way is attempted for data from the source in
-    the columns whose headers appear in match_by. The data is matched against data that exists in the output under the
-    headers that appear in the names_map as values associated with the keys that are contained in match_by. If a match
-    is found then any data that can fill an empty field will be transferred, otherwise nothing will be done and data not
-    transferred this way does not count towards the unmatched data. If a match cannot be found then the data to be
-    transferred will be appended to the output as long as strict is not true. If strict is true then this data will
-    contribute to the unmatched data instead of being included in the output. If regex is given, all data from fields
-    present in the dictionary must match the associated regex to be transferred. Data that does not match the regex will
-    count towards the unmatched data. If unmatched_output is given a value then unmatched data will be written to that
-    file.
+    name that appear in the names_map. A match of the data transferred this way is attempted. The data is matched
+    against data that exists in the output under the headers that appear in the names_map as values associated with the
+    keys that are contained in match_by. If a match is found then any data that can fill an empty field will be
+    transferred, otherwise nothing will be done and data not transferred this way does not count towards the unmatched
+    data. If a match cannot be found then the data to be transferred will be appended to the output as long as strict is
+    not true. If strict is true then this data will contribute to the unmatched data instead of being included in the
+    output. If regex is given, all data from fields being transferred must match the associated regex to be transferred.
+    Data that does not match the regex will count towards the unmatched data. If unmatched_output is given a value then
+    unmatched data will be written to that file.
 
     :param source_name: Name of the source which the source file represents
     :param source: Parsed source file
@@ -322,7 +330,6 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
 
         # attempt to find a match
         for out_row in output_copy:
-            # TODO: Turn the following into its own function which returns a bool to set found_match to
             for match in match_by:
                 if out_row[names_map[match]] == row[match]:
                     found_match = True
@@ -387,6 +394,12 @@ def data_matches_regex(data: dict[Header: str], names_map: dict[Header: Header],
 
 
 def unify_headers(names_map: dict[str: dict[Header: Header]]) -> list[str]:
+    """
+    Consolidates the headers from across sources into one list without duplicates.
+
+    :param names_map: Map of the headers from each source and their associated name in the output
+    :return: A list of headers to be used in the output
+    """
     unified_headers: list[str] = ["Source(s) found in"]
 
     for source in names_map:
@@ -401,8 +414,8 @@ def write_csv(file_name: str, headers: list[str], data: list[Row], dialect: str,
     """
     Writes data to a csv from a list of rows where each row is a dictionary containing keys which are the
     headers and values which are the elements of that row using the given dialect. If there is no file by the given
-    name, one will be created. If a file by the given name already exists, a prompt will ask if it should be
-    overwritten.
+    name, one will be created. If a file by the given name already exists, a prompt will ask if it should be overwritten
+    unless append is true, in which case the data is appended to said file.
 
     :param file_name: Name of file to be written to or created
     :param headers: Headers for the output file in the order that they should appear
