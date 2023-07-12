@@ -24,8 +24,8 @@ import re
 import sys
 from typing import Iterable
 
-# TODO: Add "rules" which data can be flagged by (e.g. only devices of this type should appear here) post data transfer
 # TODO: Update documentation when done with all the changes
+# TODO: Check for as many misuse cases as reasonable before processing (config file stuff)
 
 # Custom type aliases for clarity
 Header = str
@@ -38,7 +38,9 @@ HELP_MSG = """USAGE
 
 python3 main.py [OPTION]
 py main.py [OPTION]
-\tEnsure that both files are in the same directory as this script or a subdirectory (use relative path in config file).
+\tEnsure that both files are in the same directory as this script or a subdirectory (use relative path in 
+\tconfig file).
+
 \tSee README for more extensive detail. (https://github.com/Eric-McKinney/CSVTransfer/blob/main/README.md)
 
 OPTIONS
@@ -47,16 +49,17 @@ OPTIONS
 \t-h, --help
 \t\tPrints this help message and terminates
 \t--strict
-\t\tIf data after the first source does not match in at least one of the match_by fields, then the data is considered
-\t\tunmatched as opposed to being appended to the output in its own row
+\t\tIf data after the first source does not match in at least one of the 
+\t\tmatch_by fields, then the data is considered unmatched as opposed to 
+\t\tbeing appended to the output in its own row
 """
 
 
 def main(args: list[str] = None):
     """
     Runs this script by first parsing args which can be given as a list of strings or via command line, loads info from
-    config file, checks validity of file paths, parses and transfers data from each csv one by one, and finally writes
-    the output to a file.
+    config file, checks validity of file paths, parses and transfers data from each csv one by one, enforces source
+    rules on the output data, and finally writes the output to a file.
 
     :param args: Arguments given by a list of strings (can be provided via command line instead)
     :return:
@@ -99,6 +102,11 @@ def main(args: list[str] = None):
                       config[source]["match_by"].split(","), unmatched_output=config["output"]["unmatched_file_name"],
                       dialect=config["output"]["dialect"], regex=config["field_rules"], strict=strict)
         print("DONE", flush=True)
+
+    print("Enforcing source rule(s)...", end="", flush=True)
+    source_rules = parse_source_rules(config)
+    enforce_source_rules(merged_data, source_rules)
+    print("DONE", flush=True)
 
     print("Writing results to output file...", end="", flush=True)
     headers: list[str] = unify_headers(cols_name_mapping)
@@ -317,6 +325,7 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
 
         # Extract data
         data_to_transfer["Source(s) found in"] = source_name
+        data_to_transfer["Source rule(s) broken"] = "Not checked"
         for header in names_map:
             data_to_transfer[names_map[header]] = row[header]
 
@@ -383,14 +392,58 @@ def data_matches_regex(data: dict[Header: str], names_map: dict[Header: Header],
         if header not in names_map.values():  # if regex applies to a field not being transferred do nothing
             continue
 
-        if header == "":  # if there was no corresponding source header (shouldn't be possible) we have an issue
-            print(f"Regex match failed: No source header for output header \"{header}\"", file=sys.stderr)
-            return False
-
         if re.search(pattern=regex[header], string=data[header]) is None:
             return False
 
     return True
+
+
+def parse_source_rules(config: configparser.ConfigParser) -> dict[str: dict[Header: str]]:
+    """
+    Creates a dictionary of source names with rules as values. The rules are dictionaries of headers (from the output)
+    and the regex to apply for that header.
+
+    :param config: Parsed config file
+    :return: Dictionary of each source name (keys) and their rules (values) which are dictionaries of headers and regexs
+    """
+    source_rules = {}
+
+    for source in config["sources"]:
+        if f"{source}_rules" in config:
+            rules = config[f"{source}_rules"]
+            source_rules[source] = rules
+
+    return source_rules
+
+
+def enforce_source_rules(data: list[Row], rules: dict[str: dict[Header: str]]) -> None:
+    """
+    Goes through the data checking if source rules are obeyed. All broken rules are documented in the "Source rule(s)
+    broken" column with the format "source_name:rule_broken" (quotes not included). If no source rules are broken then
+    "None" is put instead (quotes still not included). Source rules are only enforced on rows with data from the
+    source(s) that the rule(s) apply to.
+
+    :param data: List of rows (dict w/header data pairs) representing csv file
+    :param rules: Dictionary with the source names (keys) and the rules for each source (values)
+    :return:
+    """
+    for row in data:
+        rules_broken: str = ""
+        for source_name in rules:
+            # if row doesn't contain data from source_name
+            if re.search(pattern=source_name, string=row["Source(s) found in"]) is None:
+                continue
+
+            for header in rules[source_name]:
+                regex = rules[source_name][header]
+
+                if re.search(pattern=regex, string=row[header]) is None:
+                    rules_broken += f"{source_name}:{header}" if rules_broken == "" else f", {source_name}:{header}"
+
+        if rules_broken == "":
+            row["Source rule(s) broken"] = "None"
+        else:
+            row["Source rule(s) broken"] = rules_broken
 
 
 def unify_headers(names_map: dict[str: dict[Header: Header]]) -> list[str]:
@@ -400,7 +453,7 @@ def unify_headers(names_map: dict[str: dict[Header: Header]]) -> list[str]:
     :param names_map: Map of the headers from each source and their associated name in the output
     :return: A list of headers to be used in the output
     """
-    unified_headers: list[str] = ["Source(s) found in"]
+    unified_headers: list[str] = ["Source(s) found in", "Source rule(s) broken"]
 
     for source in names_map:
         for header in names_map[source].values():
