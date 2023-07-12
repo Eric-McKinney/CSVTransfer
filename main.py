@@ -24,8 +24,8 @@ import re
 import sys
 from typing import Iterable
 
-# TODO: Add "rules" which data can be flagged by (e.g. only devices of this type should appear here) post data transfer
 # TODO: Update documentation when done with all the changes
+# TODO: Check for as many misuse cases as reasonable before processing (config file stuff)
 
 # Custom type aliases for clarity
 Header = str
@@ -100,7 +100,10 @@ def main(args: list[str] = None):
                       dialect=config["output"]["dialect"], regex=config["field_rules"], strict=strict)
         print("DONE", flush=True)
 
-    # TODO: Put source rule enforcing here
+    print("Enforcing source rule(s)...", end="", flush=True)
+    source_rules = parse_source_rules(config)
+    enforce_source_rules(merged_data, source_rules)
+    print("DONE", flush=True)
 
     print("Writing results to output file...", end="", flush=True)
     headers: list[str] = unify_headers(cols_name_mapping)
@@ -319,6 +322,7 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
 
         # Extract data
         data_to_transfer["Source(s) found in"] = source_name
+        data_to_transfer["Source rule(s) broken"] = "Not checked"
         for header in names_map:
             data_to_transfer[names_map[header]] = row[header]
 
@@ -385,19 +389,41 @@ def data_matches_regex(data: dict[Header: str], names_map: dict[Header: Header],
         if header not in names_map.values():  # if regex applies to a field not being transferred do nothing
             continue
 
-        if header == "":  # if there was no corresponding source header (shouldn't be possible) we have an issue
-            print(f"Regex match failed: No source header for output header \"{header}\"", file=sys.stderr)
-            return False
-
         if re.search(pattern=regex[header], string=data[header]) is None:
             return False
 
     return True
 
 
-# TODO: Make enforce_source_rules()
-def enforce_source_rules(data: list[Row], rules: dict[str: str]) -> None:
-    pass
+def parse_source_rules(config: configparser.ConfigParser) -> dict[str: dict[Header: str]]:
+    source_rules = {}
+
+    for source in config["sources"]:
+        if f"{source}_rules" in config:
+            rules = config[f"{source}_rules"]
+            source_rules[source] = rules
+
+    return source_rules
+
+
+def enforce_source_rules(data: list[Row], rules: dict[str: dict[Header: str]]) -> None:
+    for row in data:
+        rules_broken: str = ""
+        for source_name in rules:
+            # if row doesn't have data from source_name
+            if re.search(pattern=source_name, string=row["Source(s) found in"]) is None:
+                continue
+
+            for header in rules[source_name]:
+                regex = rules[source_name][header]
+
+                if re.search(pattern=regex, string=row[header]) is None:
+                    rules_broken += f"{source_name}:{header}" if rules_broken == "" else f", {source_name}:{header}"
+
+        if rules_broken == "":
+            row["Source rule(s) broken"] = "None"
+        else:
+            row["Source rule(s) broken"] = rules_broken
 
 
 def unify_headers(names_map: dict[str: dict[Header: Header]]) -> list[str]:
@@ -407,7 +433,7 @@ def unify_headers(names_map: dict[str: dict[Header: Header]]) -> list[str]:
     :param names_map: Map of the headers from each source and their associated name in the output
     :return: A list of headers to be used in the output
     """
-    unified_headers: list[str] = ["Source(s) found in"]
+    unified_headers: list[str] = ["Source(s) found in", "Source rule(s) broken"]
 
     for source in names_map:
         for header in names_map[source].values():
