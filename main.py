@@ -24,8 +24,8 @@ import re
 import sys
 from typing import Iterable
 
-# TODO: Update documentation when done with all the changes
 # TODO: Check for as many misuse cases as reasonable before processing (config file stuff)
+# TODO: Make README easier to read (both formatting and language)
 
 # Custom type aliases for clarity
 Header = str
