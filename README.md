@@ -72,7 +72,7 @@ value used for a cell in the output will not be replaced. Once you have listed
 all sources you plan to use as well as the paths to the csv files, you need to
 make a section for each source by the same name you gave in this section.
 
-### section for each source
+### source section(s)
 
 Each source you plan to use and have listed in the sources section need a
 section to specify how they should be handled. The section name should be the
@@ -84,22 +84,43 @@ of these fields entails can be found below in
 values unless they appear in (and have values in) the defaults section.
 
 ### output section
+
 The output section is mostly just to name the output file, but you can also 
 change the dialect to write output csvs in. Excel is the default and is what 
 I would recommend. More about dialects below. You can also optionally give 
 the name for a file to dump data that could not be matched. Unmatched data will
 only be dumped to that file if you give it a name.
 
-### source_rules
+### source rules section(s)
 
-WIP
+For each source you may add a section to declare rules specific to that source
+to be processed after data transfer. A source's rule section must be named the
+same as the source name followed by _rules. For example, for a source named
+rock_data the rules section would be named rock_data_rules. In this section you
+may declare up to one rule per header in the output to apply to data under said 
+header. Rules are regex patterns for data to be validated by. If data does not 
+match the regex provided, it will be documented in the "Source rule(s) broken" 
+column. If data matches the regex, "None" will be put in this column instead.
 
-### field_rules
+### field_rules section
 
 The field_rules section is a place where you can specify formats for data to be 
 validated against using regex. This is entirely optional. Data that does not 
 match the given regex for a given header will not be transferred and counts 
 towards the unmatched data.
+
+### source rules vs field_rules
+
+You may notice that the source rules section bears a lot of similarities to the 
+field_rules section. The key differences between the two are that field_rules 
+are applied before data is transferred, field_rules do not discriminate between 
+sources, and data that does not match field_rules is not transferred. Source
+rules are applied after data is transferred, source rules are specific to one
+source, and data that does not match source rules stays in the output. In this 
+way, source rules function much more as a check to make sure that data has the 
+right format or that certain fields contain words or phrases. Meanwhile, 
+field_rules functions more as a filter applied to data being transferred to get
+rid of bad data.
 
 ## Config File Fields
 
@@ -169,17 +190,40 @@ info can be found in the
 [python csv library](https://docs.python.org/3/library/csv.html#csv.excel).
 
 ---
-### field_rules section
-> Optionally put regex to match fields by. To see what types of regex syntax
-are supported, see the
+### source rules section(s)
+> Optionally provide regex to match fields from individual sources by. To see 
+what types of regex syntax are supported, see the
 [python regex library documentation](https://docs.python.org/3/library/re.html).
-To create a rule, put the header that will appear in the output and assign it
-the regex you want to filter by. Data that does not match this regex will not
-be transferred and will count towards the unmatched data.
+To create a rule, put a header that will appear in the output and assign it
+the regex you want data under that header to match.
+
+Example:
+```ini
+[example_source_name_rules]
+# Rule states that goldfish names in the output from example_source_name should 
+# not be (or contain) Jerry or jerry
+goldfish names = ^((?![Jj]erry).)*$
+
+# Rule states that water quality in the output from example_source_name should
+# be in the range 1/10 to 10/10 (inclusive)
+water quality = ^([1-9]|10)\/10$
+
+# Rule states that fish bowl serial numbers in the output from this source should
+# contain the number 4
+fish bowl serial number = 4
+```
+
+---
+### field_rules section
+> Optionally put regex to filter fields by. To create a rule, put the header that 
+will appear in the output and assign it the regex you want data to match. Data 
+that does not match this regex will not be transferred and will count towards 
+the unmatched data.
 
 Example:
 ```ini
 [field_rules]
+# The following rule defines the format for data in the IPv4 address column
 IPv4 address = ^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$
 ```
 
@@ -204,6 +248,9 @@ match_by_name(s) = social security
 header_row_num =
 ignored_row(s) =
 
+[source1_rules]
+social security = 5
+
 [source3]
 target_column(s) = favorite color
 column_name(s) =
@@ -212,13 +259,14 @@ match_by_name(s) =
 header_row_num = 1
 ignored_row(s) = 0,5
 
+[source3_rules]
+favorite color = a
+
 [output]
 file_name = test_outputs/output.csv
 unmatched_file_name =
 # valid dialects: unix, excel, excel_tab
 dialect = excel
-
-[source_rules]
 
 [field_rules]
 ```
