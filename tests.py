@@ -107,7 +107,6 @@ class MyTestCase(unittest.TestCase):
                 "unmatched_file_name": "",
                 "dialect": "excel"
             },
-            "source_rules": {},
             "field_rules": {}
         }
 
@@ -188,13 +187,20 @@ class MyTestCase(unittest.TestCase):
         main.transfer_data(source2_name, source2, output, names_map2, match_by2)
 
         expected_output = [
-            {"Source(s) found in": "source1, source2", "t": "1", "func1": "2", "func2": "4"},
-            {"Source(s) found in": "source1, source2", "t": "2", "func1": "4", "func2": "8"},
-            {"Source(s) found in": "source1, source2", "t": "3", "func1": "6", "func2": "88"},
-            {"Source(s) found in": "source1, source2", "t": "4", "func1": "8", "func2": "64"},
-            {"Source(s) found in": "source1, source2", "t": "5", "func1": "10", "func2": "3"},
-            {"Source(s) found in": "source1", "t": "6", "func1": "13", "func2": ""},
-            {"Source(s) found in": "source1", "t": "7", "func1": "19", "func2": "2"}
+            {"Source(s) found in": "source1, source2", "Source rule(s) broken": "Not checked", "t": "1", "func1": "2",
+             "func2": "4"},
+            {"Source(s) found in": "source1, source2", "Source rule(s) broken": "Not checked", "t": "2", "func1": "4",
+             "func2": "8"},
+            {"Source(s) found in": "source1, source2", "Source rule(s) broken": "Not checked", "t": "3", "func1": "6",
+             "func2": "88"},
+            {"Source(s) found in": "source1, source2", "Source rule(s) broken": "Not checked", "t": "4", "func1": "8",
+             "func2": "64"},
+            {"Source(s) found in": "source1, source2", "Source rule(s) broken": "Not checked", "t": "5", "func1": "10",
+             "func2": "3"},
+            {"Source(s) found in": "source1", "Source rule(s) broken": "Not checked", "t": "6", "func1": "13",
+             "func2": ""},
+            {"Source(s) found in": "source1", "Source rule(s) broken": "Not checked", "t": "7", "func1": "19",
+             "func2": "2"}
         ]
 
         self.assertEqual(expected_output, output)
@@ -240,21 +246,33 @@ class MyTestCase(unittest.TestCase):
             strict_unmatched_lines: list[str] = f.readlines()
 
         expected_output = [
-            {"Source(s) found in": "source1", "Song": "Power Slam", "Rating": "8/10"},
-            {"Source(s) found in": "source1", "Song": "Mirror of the World", "Rating": "9/10"},
-            {"Source(s) found in": "source1", "Song": "Freesia", "Rating": "10/10"},
-            {"Source(s) found in": "source1", "Song": "Nobody", "Rating": "10/10"},
-            {"Source(s) found in": "source1, source2", "Song": "HEAVY DAY", "Rating": "11/10"},
-            {"Source(s) found in": "source2", "Song": "Alone Infection", "Rating": "9/10"},
-            {"Source(s) found in": "source2", "Song": "Requiem", "Rating": "10/10"},
-            {"Source(s) found in": "source2", "Song": "505", "Rating": "10/10"}
+            {"Source(s) found in": "source1", "Source rule(s) broken": "Not checked", "Song": "Power Slam",
+             "Rating": "8/10"},
+            {"Source(s) found in": "source1", "Source rule(s) broken": "Not checked", "Song": "Mirror of the World",
+             "Rating": "9/10"},
+            {"Source(s) found in": "source1", "Source rule(s) broken": "Not checked", "Song": "Freesia",
+             "Rating": "10/10"},
+            {"Source(s) found in": "source1", "Source rule(s) broken": "Not checked", "Song": "Nobody",
+             "Rating": "10/10"},
+            {"Source(s) found in": "source1, source2", "Source rule(s) broken": "Not checked", "Song": "HEAVY DAY",
+             "Rating": "11/10"},
+            {"Source(s) found in": "source2", "Source rule(s) broken": "Not checked", "Song": "Alone Infection",
+             "Rating": "9/10"},
+            {"Source(s) found in": "source2", "Source rule(s) broken": "Not checked", "Song": "Requiem",
+             "Rating": "10/10"},
+            {"Source(s) found in": "source2", "Source rule(s) broken": "Not checked", "Song": "505", "Rating": "10/10"}
         ]
         expected_strict_output = [
-            {"Source(s) found in": "source1", "Song": "Power Slam", "Rating": "8/10"},
-            {"Source(s) found in": "source1", "Song": "Mirror of the World", "Rating": "9/10"},
-            {"Source(s) found in": "source1", "Song": "Freesia", "Rating": "10/10"},
-            {"Source(s) found in": "source1", "Song": "Nobody", "Rating": "10/10"},
-            {"Source(s) found in": "source1, source2", "Song": "HEAVY DAY", "Rating": "11/10"}
+            {"Source(s) found in": "source1", "Source rule(s) broken": "Not checked", "Song": "Power Slam",
+             "Rating": "8/10"},
+            {"Source(s) found in": "source1", "Source rule(s) broken": "Not checked", "Song": "Mirror of the World",
+             "Rating": "9/10"},
+            {"Source(s) found in": "source1", "Source rule(s) broken": "Not checked", "Song": "Freesia",
+             "Rating": "10/10"},
+            {"Source(s) found in": "source1", "Source rule(s) broken": "Not checked", "Song": "Nobody",
+             "Rating": "10/10"},
+            {"Source(s) found in": "source1, source2", "Source rule(s) broken": "Not checked", "Song": "HEAVY DAY",
+             "Rating": "11/10"}
         ]
 
         expected_unmatched_lines: list[str] = [
@@ -318,20 +336,24 @@ class MyTestCase(unittest.TestCase):
             unmatched_lines: list[str] = f.readlines()
 
         expected_output: list[dict] = [
-            {"Source(s) found in": "source1", "Name": "abc.def", "Size": "300kB", "Delete?": "True"},
-            {"Source(s) found in": "source1, source2", "Name": "important_data.csv", "Size": "20MB", "Delete?": "False",
-             "Owner": "root"},
-            {"Source(s) found in": "source1, source2", "Name": "funny.jpg", "Size": "40MB", "Delete?": "False",
-             "Owner": "me"},
-            {"Source(s) found in": "source1", "Name": "info.txt", "Size": "10kB", "Delete?": "False"},
-            {"Source(s) found in": "source1, source2", "Name": "music.mp3", "Size": "400MB", "Delete?": "False",
-             "Owner": "you"},
-            {"Source(s) found in": "source2", "Name": "proj.c", "Size": "89B", "Owner": "npp", "Delete?": "n"},
-            {"Source(s) found in": "source2", "Name": "new_file", "Size": "1B", "Owner": "Simon Cowell", "Delete?": ""},
-            {"Source(s) found in": "source3", "User": "Joe", "Admin?": "y"},
-            {"Source(s) found in": "source3", "User": "Brock", "Admin?": "n"},
-            {"Source(s) found in": "source3", "User": "Amy", "Admin?": "n"},
-            {"Source(s) found in": "source3", "User": "Diana", "Admin?": "y"},
+            {"Source(s) found in": "source1", "Source rule(s) broken": "Not checked", "Name": "abc.def",
+             "Size": "300kB", "Delete?": "True"},
+            {"Source(s) found in": "source1, source2", "Source rule(s) broken": "Not checked",
+             "Name": "important_data.csv", "Size": "20MB", "Delete?": "False", "Owner": "root"},
+            {"Source(s) found in": "source1, source2", "Source rule(s) broken": "Not checked", "Name": "funny.jpg",
+             "Size": "40MB", "Delete?": "False", "Owner": "me"},
+            {"Source(s) found in": "source1", "Source rule(s) broken": "Not checked", "Name": "info.txt",
+             "Size": "10kB", "Delete?": "False"},
+            {"Source(s) found in": "source1, source2", "Source rule(s) broken": "Not checked", "Name": "music.mp3",
+             "Size": "400MB", "Delete?": "False", "Owner": "you"},
+            {"Source(s) found in": "source2", "Source rule(s) broken": "Not checked", "Name": "proj.c", "Size": "89B",
+             "Owner": "npp", "Delete?": "n"},
+            {"Source(s) found in": "source2", "Source rule(s) broken": "Not checked", "Name": "new_file", "Size": "1B",
+             "Owner": "Simon Cowell", "Delete?": ""},
+            {"Source(s) found in": "source3", "Source rule(s) broken": "Not checked", "User": "Joe", "Admin?": "y"},
+            {"Source(s) found in": "source3", "Source rule(s) broken": "Not checked", "User": "Brock", "Admin?": "n"},
+            {"Source(s) found in": "source3", "Source rule(s) broken": "Not checked", "User": "Amy", "Admin?": "n"},
+            {"Source(s) found in": "source3", "Source rule(s) broken": "Not checked", "User": "Diana", "Admin?": "y"},
         ]
         expected_unmatched_lines: list[str] = [
             "source1 had no unmatched data :)\n",
@@ -380,18 +402,17 @@ class MyTestCase(unittest.TestCase):
                 "unmatched_file_name": "",
                 "dialect": "excel"
             },
-            "source_rules": {},
             "field_rules": {}
         }
 
         expected_lines = [
-            "Source(s) found in,social security,favorite color\n",
-            "source1,123456,Red\n",
-            "source1,987654321,Orange\n",
-            "\"source1, source3\",1234321,Yellow\n",
-            "\"source1, source3\",234111,Green\n",
-            "source3,,Teal\n",
-            "source3,565,Royal purple\n"
+            "Source(s) found in,Source rule(s) broken,social security,favorite color\n",
+            "source1,None,123456,Red\n",
+            "source1,None,987654321,Orange\n",
+            "\"source1, source3\",None,1234321,Yellow\n",
+            "\"source1, source3\",None,234111,Green\n",
+            "source3,None,,Teal\n",
+            "source3,None,565,Royal purple\n"
         ]
 
         self.assertEqual(expected_lines, lines)
@@ -425,6 +446,9 @@ class MyTestCase(unittest.TestCase):
                 "header_row_num": "1",
                 "ignored_row(s)": "0,6,5"
             },
+            "example3_rules": {
+                "favorite color": "[Rr]"
+            },
             "example": {
                 "target_column(s)": "Employment Status,Favorite Color",
                 "column_name(s)": "employment status,favorite color",
@@ -438,7 +462,6 @@ class MyTestCase(unittest.TestCase):
                 "unmatched_file_name": "test_outputs/unmatched2.csv",
                 "dialect": "unix"
             },
-            "source_rules": {},
             "field_rules": {
                 "employment status": r"^(([eE]|[uU]ne)mployed)$",
                 "social security number": r"^\d+$"
@@ -446,10 +469,11 @@ class MyTestCase(unittest.TestCase):
         }
 
         expected_lines = [
-            '"Source(s) found in","social security number","employment status","favorite color"\n',
-            '"example3","234111","employed","Magenta"\n',
-            '"example","123456","Employed","Red"\n',
-            '"example","987654321","Unemployed","Orange"\n'
+            '"Source(s) found in","Source rule(s) broken","social security number","employment status",'
+            '"favorite color"\n',
+            '"example3","example3:favorite color","234111","employed","Magenta"\n',
+            '"example","None","123456","Employed","Red"\n',
+            '"example","None","987654321","Unemployed","Orange"\n'
         ]
 
         expected_unmatched_lines = [
