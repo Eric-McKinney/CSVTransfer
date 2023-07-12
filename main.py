@@ -100,6 +100,8 @@ def main(args: list[str] = None):
                       dialect=config["output"]["dialect"], regex=config["field_rules"], strict=strict)
         print("DONE", flush=True)
 
+    # TODO: Put source rule enforcing here
+
     print("Writing results to output file...", end="", flush=True)
     headers: list[str] = unify_headers(cols_name_mapping)
     write_csv(config["output"]["file_name"], headers, merged_data, config["output"]["dialect"])
@@ -391,6 +393,11 @@ def data_matches_regex(data: dict[Header: str], names_map: dict[Header: Header],
             return False
 
     return True
+
+
+# TODO: Make enforce_source_rules()
+def enforce_source_rules(data: list[Row], rules: dict[str: str]) -> None:
+    pass
 
 
 def unify_headers(names_map: dict[str: dict[Header: Header]]) -> list[str]:
