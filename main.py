@@ -25,6 +25,7 @@ import sys
 from typing import Iterable
 
 # TODO: Check for as many misuse cases as reasonable before processing (config file stuff)
+# TODO: Change any (s) to just s in config file and elsewhere
 # TODO: Make README easier to read (both formatting and language)
 
 # Custom type aliases for clarity
