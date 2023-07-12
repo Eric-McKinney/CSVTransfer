@@ -94,6 +94,9 @@ class MyTestCase(unittest.TestCase):
                 "header_row_num": "0",
                 "ignored_row(s)": "-1"
             },
+            "source1_rules": {
+                "social security": "5"
+            },
             "source3": {
                 "target_column(s)": "favorite color",
                 "column_name(s)": "",
@@ -101,6 +104,9 @@ class MyTestCase(unittest.TestCase):
                 "match_by_name(s)": "",
                 "header_row_num": "1",
                 "ignored_row(s)": "0,5"
+            },
+            "source3_rules": {
+                "favorite color": "a"
             },
             "output": {
                 "file_name": "test_outputs/output.csv",
@@ -389,6 +395,9 @@ class MyTestCase(unittest.TestCase):
                 "header_row_num": "0",
                 "ignored_row(s)": "-1"
             },
+            "source1_rules": {
+                "social security": "5"
+            },
             "source3": {
                 "target_column(s)": "favorite color",
                 "column_name(s)": "",
@@ -396,6 +405,9 @@ class MyTestCase(unittest.TestCase):
                 "match_by_name(s)": "",
                 "header_row_num": "1",
                 "ignored_row(s)": "0,5"
+            },
+            "source3_rules": {
+                "favorite color": "a"
             },
             "output": {
                 "file_name": "test_outputs/output.csv",
@@ -409,8 +421,8 @@ class MyTestCase(unittest.TestCase):
             "Source(s) found in,Source rule(s) broken,social security,favorite color\n",
             "source1,None,123456,Red\n",
             "source1,None,987654321,Orange\n",
-            "\"source1, source3\",None,1234321,Yellow\n",
-            "\"source1, source3\",None,234111,Green\n",
+            "\"source1, source3\",\"source1:social security, source3:favorite color\",1234321,Yellow\n",
+            "\"source1, source3\",\"source1:social security, source3:favorite color\",234111,Green\n",
             "source3,None,,Teal\n",
             "source3,None,565,Royal purple\n"
         ]
@@ -447,7 +459,8 @@ class MyTestCase(unittest.TestCase):
                 "ignored_row(s)": "0,6,5"
             },
             "example3_rules": {
-                "favorite color": "[Rr]"
+                "favorite color": "[Rr]",
+                "employment status": "^[^E]"
             },
             "example": {
                 "target_column(s)": "Employment Status,Favorite Color",
@@ -457,6 +470,7 @@ class MyTestCase(unittest.TestCase):
                 "header_row_num": "0",
                 "ignored_row(s)": "-1"
             },
+            "example_rules": {},
             "output": {
                 "file_name": "test_outputs/output2.csv",
                 "unmatched_file_name": "test_outputs/unmatched2.csv",
