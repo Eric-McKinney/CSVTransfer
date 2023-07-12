@@ -38,7 +38,9 @@ HELP_MSG = """USAGE
 
 python3 main.py [OPTION]
 py main.py [OPTION]
-\tEnsure that both files are in the same directory as this script or a subdirectory (use relative path in config file).
+\tEnsure that both files are in the same directory as this script or a subdirectory (use relative path in 
+\tconfig file).
+
 \tSee README for more extensive detail. (https://github.com/Eric-McKinney/CSVTransfer/blob/main/README.md)
 
 OPTIONS
@@ -47,16 +49,17 @@ OPTIONS
 \t-h, --help
 \t\tPrints this help message and terminates
 \t--strict
-\t\tIf data after the first source does not match in at least one of the match_by fields, then the data is considered
-\t\tunmatched as opposed to being appended to the output in its own row
+\t\tIf data after the first source does not match in at least one of the 
+\t\tmatch_by fields, then the data is considered unmatched as opposed to 
+\t\tbeing appended to the output in its own row
 """
 
 
 def main(args: list[str] = None):
     """
     Runs this script by first parsing args which can be given as a list of strings or via command line, loads info from
-    config file, checks validity of file paths, parses and transfers data from each csv one by one, and finally writes
-    the output to a file.
+    config file, checks validity of file paths, parses and transfers data from each csv one by one, enforces source
+    rules on the output data, and finally writes the output to a file.
 
     :param args: Arguments given by a list of strings (can be provided via command line instead)
     :return:
@@ -396,6 +399,13 @@ def data_matches_regex(data: dict[Header: str], names_map: dict[Header: Header],
 
 
 def parse_source_rules(config: configparser.ConfigParser) -> dict[str: dict[Header: str]]:
+    """
+    Creates a dictionary of source names with rules as values. The rules are dictionaries of headers (from the output)
+    and the regex to apply for that header.
+
+    :param config: Parsed config file
+    :return: Dictionary of each source name (keys) and their rules (values) which are dictionaries of headers and regexs
+    """
     source_rules = {}
 
     for source in config["sources"]:
@@ -407,10 +417,20 @@ def parse_source_rules(config: configparser.ConfigParser) -> dict[str: dict[Head
 
 
 def enforce_source_rules(data: list[Row], rules: dict[str: dict[Header: str]]) -> None:
+    """
+    Goes through the data checking if source rules are obeyed. All broken rules are documented in the "Source rule(s)
+    broken" column with the format "source_name:rule_broken" (quotes not included). If no source rules are broken then
+    "None" is put instead (quotes still not included). Source rules are only enforced on rows with data from the
+    source(s) that the rule(s) apply to.
+
+    :param data: List of rows (dict w/header data pairs) representing csv file
+    :param rules: Dictionary with the source names (keys) and the rules for each source (values)
+    :return:
+    """
     for row in data:
         rules_broken: str = ""
         for source_name in rules:
-            # if row doesn't have data from source_name
+            # if row doesn't contain data from source_name
             if re.search(pattern=source_name, string=row["Source(s) found in"]) is None:
                 continue
 
