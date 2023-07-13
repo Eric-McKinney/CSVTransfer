@@ -82,9 +82,6 @@ def main(args: list[str] = None):
 
     config: configparser.ConfigParser = get_config_constants()
 
-    if not valid_file_names(config["sources"].values()):
-        raise SystemExit("Invalid source file name(s). Ensure the paths are correct in the config file.")
-
     print("="*80)
 
     merged_data: list[Row] = []
@@ -157,6 +154,9 @@ def validate_config(config: configparser.ConfigParser) -> str:
             base_sections_exist = False
             err_msg += f"{section} not found in config file\n"
 
+    if base_sections_exist and not valid_file_names(config["sources"].values()):
+        err_msg += "Invalid source file name(s). Ensure the paths are correct in the config file\n"
+
     # Identify missing sources
     for source in config["sources"]:
         if source not in config:
@@ -221,7 +221,7 @@ def validate_config(config: configparser.ConfigParser) -> str:
 def get_config_constants() -> configparser.ConfigParser:
     """
     Assigns config constants from the file CONFIG_FILE_NAME. Both the constants and the config file are described in the
-    README. Exits and prints error message if necessary fields are missing.
+    README. Exits and prints error message if there are issues with the config file.
 
     :raises SystemExit: If necessary fields are missing from config file.
     :return: ConfigParser object which acts as a map of the config file where the keys are the sections in the config
