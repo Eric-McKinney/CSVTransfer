@@ -77,8 +77,8 @@ make a section for each source by the same name you gave in this section.
 Each source you plan to use and have listed in the sources section need a
 section to specify how they should be handled. The section name should be the
 same as the name you put in the sources section. In this section there needs
-to be the following fields: target_column(s), column_name(s), match_by,
-match_by_name(s), header_row_num, and ignored_row(s). Descriptions for what each
+to be the following fields: target_columns, column_names, match_by,
+match_by_names, header_row_num, and ignored_rows. Descriptions for what each
 of these fields entails can be found below in 
 [Config File Fields](#config-file-fields). All of these fields need
 values unless they appear in (and have values in) the defaults section.
@@ -99,7 +99,7 @@ same as the source name followed by _rules. For example, for a source named
 rock_data the rules section would be named rock_data_rules. In this section you
 may declare up to one rule per header in the output to apply to data under said 
 header. Rules are regex patterns for data to be validated by. If data does not 
-match the regex provided, it will be documented in the "Source rule(s) broken" 
+match the regex provided, it will be documented in the "Source rules broken" 
 column. If data matches the regex, "None" will be put in this column instead.
 
 ### field_rules section
@@ -129,7 +129,7 @@ rid of bad data.
 > The number of the row (starting at 0) which contains the headers you want to
 use.
 
-**ignored_row(s)**
+**ignored_rows**
 > A comma separated list of numbers of rows to ignore while parsing, 
 transferring data, and putting data in the output file. Any negative value or
 out of bounds value effectively means nothing. In the template this value is
@@ -138,37 +138,37 @@ of the numbers does not matter. Data ignored this way does not contribute to
 the unmatched data.
 
 ---
-### section for each source
+### source section(s)
 
-**target_column(s)**
+**target_columns**
 > A comma separated list of the headers whose columns should be used in the data
 transfer.
 
-**column_name(s)**
+**column_names**
 > A comma separated list of the headers to be used in the output. The headers
-from the target_column(s) section are matched to these names based on the order
-they appear. If there are less column_name(s) than target_column(s) then the
-extra target_column(s) assume the same name in the output. Extra column_name(s)
+from the target_columns section are matched to these names based on the order
+they appear. If there are less column_names than target_columns then the
+extra target_columns assume the same name in the output. Extra column_names
 are not used.
 
 **match_by**
-> Functions in the same way that target_column(s) does, but headers listed here
+> Functions in the same way that target_columns does, but headers listed here
 are also used to match data by when transferring. A match is attempted among data
 in the output at the time of transfer (data already transferred not including the
 current source). If a match is found, then data being transferred will only fill
 in empty fields in that row. If a match is not found, then data will be appended
 to the output unless `--strict` is used, in which case the data is considered
-unmatched. Headers listed in both target_column(s) and here are only put in the
+unmatched. Headers listed in both target_columns and here are only put in the
 output once, but it's best to avoid doing this.
 
-**match_by_name(s)**
-> Functions in the same way as column_name(s), but for headers in match_by
+**match_by_names**
+> Functions in the same way as column_names, but for headers in match_by
 
 **header_row_num**
 > Same as in the defaults section, but if a value is provided here it will
 override the value given in defaults.
 
-**ignored_row(s)**
+**ignored_rows**
 > See above.
 
 ---
@@ -234,30 +234,30 @@ IPv4 address = ^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$
 ```ini
 [defaults]
 header_row_num = 0
-ignored_row(s) = -1
+ignored_rows = -1
 
 [sources]
 source1 = example_files/example.csv
 source3 = example_files/example3.csv
 
 [source1]
-target_column(s) = Favorite Color
-column_name(s) = favorite color
+target_columns = Favorite Color
+column_names = favorite color
 match_by = Social Security Number
-match_by_name(s) = social security
+match_by_names = social security
 header_row_num =
-ignored_row(s) =
+ignored_rows =
 
 [source1_rules]
 social security = 5
 
 [source3]
-target_column(s) = favorite color
-column_name(s) =
+target_columns = favorite color
+column_names =
 match_by = social security
-match_by_name(s) =
+match_by_names =
 header_row_num = 1
-ignored_row(s) = 0,5
+ignored_rows = 0,5
 
 [source3_rules]
 favorite color = a
