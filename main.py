@@ -25,7 +25,6 @@ import sys
 from typing import Iterable
 
 # TODO: Check for as many misuse cases as reasonable before processing (config file stuff)
-# TODO: Change any (s) to just s in config file and elsewhere
 # TODO: Make README easier to read (both formatting and language)
 
 # Custom type aliases for clarity
@@ -99,9 +98,10 @@ def main(args: list[str] = None):
         print("DONE", flush=True)
 
         print(f"Transferring {source}'s data...", end="", flush=True)
+        field_rules = None if "field_rules" not in config else config["field_rules"]
         transfer_data(source, parsed_source, merged_data, cols_name_mapping[source],
                       config[source]["match_by"].split(","), unmatched_output=config["output"]["unmatched_file_name"],
-                      dialect=config["output"]["dialect"], regex=config["field_rules"], strict=strict)
+                      dialect=config["output"]["dialect"], regex=field_rules, strict=strict)
         print("DONE", flush=True)
 
     print("Enforcing source rule(s)...", end="", flush=True)
@@ -139,6 +139,85 @@ def valid_file_names(file_names: Iterable[str]) -> bool:
     return True
 
 
+def validate_config(config: configparser.ConfigParser) -> str:
+    """
+    Checks the parsed config file for improper inputs, missing information, and other improper usage. While checking for
+    these errors, error messages are accumulated and returned after the config file has been fully checked. If there
+    were no errors detected then the string returned will be empty.
+
+    :param config: Parsed config file
+    :return: String with messages for all errors detected or an empty string
+    """
+    err_msg = ""
+    base_sections_exist = True
+
+    # Identify missing vital sections
+    for section in ["defaults", "sources", "output"]:
+        if section not in config:
+            base_sections_exist = False
+            err_msg += f"{section} not found in config file\n"
+
+    # Identify missing sources
+    for source in config["sources"]:
+        if source not in config:
+            err_msg += f"Source section \"{source}\" not found\n"
+        elif base_sections_exist:
+            for key in config["defaults"]:
+                if key not in config[source]:
+                    err_msg += f"Key \"{key}\" from defaults not found in {source}. It can be empty, but it needs to " \
+                               f"be there\n"
+
+    if base_sections_exist and len(config["sources"]) == 0:
+        err_msg += "No source sections found\n"
+
+    # Identify missing variables
+    if base_sections_exist:
+        for source in config["sources"]:
+            # Identify missing variables in each source section
+            for key in ["target_columns", "header_row_num"]:
+                not_in_source = key not in config[source]
+                not_in_defaults = key not in config["defaults"]
+
+                if not_in_source:
+                    err_msg += f"Key {key} not found in {source}\n"
+                    continue
+
+                no_value_in_source = True if not_in_source else config[source][key] in [None, ""]
+                no_value_in_defaults = True if not_in_defaults else config["defaults"][key] in [None, ""]
+
+                if no_value_in_source and (not_in_defaults or no_value_in_defaults):
+                    err_msg += f"No value for {key} in {source} or in defaults\n"
+
+            # Check for empty source rules
+            source_rules = f"{source}_rules"
+            if source_rules in config:
+                for header in config[source_rules]:
+                    rule = config[source_rules]
+
+                    if rule in [None, ""]:
+                        err_msg += f"Empty rule \"{header}\" in {source_rules}\n"
+
+        # Identify missing variables in output section
+        for key in ["file_name", "dialect"]:
+            if key not in config["output"]:
+                err_msg += f"Output {key} missing\n"
+            elif config["output"][key] in [None, ""]:
+                err_msg += f"No value for output {key}\n"
+
+        if "dialect" in config["output"] and config["output"]["dialect"] not in ["excel", "excel_tab", "unix"]:
+            err_msg += f'Invalid output dialect \"{config["output"]["dialect"]}\"\n'
+
+    # Check for empty field rules
+    if "field_rules" in config:
+        for header in config["field_rules"]:
+            rule = config["field_rules"][header]
+
+            if rule in [None, ""]:
+                err_msg += f"Empty rule for {header} in field_rules\n"
+
+    return err_msg.rstrip()
+
+
 def get_config_constants() -> configparser.ConfigParser:
     """
     Assigns config constants from the file CONFIG_FILE_NAME. Both the constants and the config file are described in the
@@ -150,41 +229,23 @@ def get_config_constants() -> configparser.ConfigParser:
     is the value of that variable (as a string).
     """
     if not os.path.exists(os.path.join(os.getcwd(), CONFIG_FILE_NAME)):
-        raise SystemExit(f"Could not find config file '{CONFIG_FILE_NAME}' in the current directory.\n"
+        raise SystemExit(f"Could not find config file \"{CONFIG_FILE_NAME}\" in the current directory.\n"
                          f"Either create a config file by that name or change the CONFIG_FILE_NAME variable in this "
                          f"script.")
 
     config = configparser.ConfigParser(allow_no_value=True)
     config.read(CONFIG_FILE_NAME)
+    errors = validate_config(config)
+
+    if errors != "":
+        raise SystemExit(errors)
 
     # Set all values of keys in sources appear in defaults to defaults if not set
     # (configparser does this but for all sections, and I don't want that)
     for source in config["sources"]:
-        if source not in config:
-            raise SystemExit(f"No section found for {source}")
-
         for key in config["defaults"]:
-            if key not in config[source]:
-                raise SystemExit(f"Key {key} not found in {source}")
-
             if config[source][key] in [None, ""] and config["defaults"][key] not in [None, ""]:
                 config[source][key] = config["defaults"][key]
-
-    # Identify missing variables
-    if len(config["sources"]) == 0:
-        raise SystemExit("No sources found in config file")
-
-    missing: str = ""
-    for source in config["sources"]:
-        for key in ["target_columns", "header_row_num"]:
-            if key not in config[source] or config[source][key] in [None, ""]:
-                missing += f"{key} missing for {source}\n"
-    for key in ["file_name", "dialect"]:
-        if key not in config["output"] or config["output"][key] in [None, ""]:
-            missing += f"Output {key} missing\n"
-
-    if missing != "":
-        raise SystemExit(missing.rstrip())
 
     return config
 
