@@ -112,8 +112,7 @@ class MyTestCase(unittest.TestCase):
                 "file_name": "test_outputs/output.csv",
                 "unmatched_file_name": "",
                 "dialect": "excel"
-            },
-            "field_rules": {}
+            }
         }
 
         self.assertConfigEquals(expected_constants, config)
@@ -123,7 +122,7 @@ class MyTestCase(unittest.TestCase):
         with self.assertRaises(SystemExit):
             main.get_config_constants()
 
-    def test_get_constants_missing_constants(self):  # Give same inputs for the function call and the test inputs
+    def test_get_constants_missing_constants(self):
         main.CONFIG_FILE_NAME = "example_files/empty_config.ini"
 
         with self.assertRaises(SystemExit):
@@ -413,8 +412,7 @@ class MyTestCase(unittest.TestCase):
                 "file_name": "test_outputs/output.csv",
                 "unmatched_file_name": "",
                 "dialect": "excel"
-            },
-            "field_rules": {}
+            }
         }
 
         expected_lines = [
