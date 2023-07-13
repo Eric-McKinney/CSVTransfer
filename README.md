@@ -1,9 +1,8 @@
 ↖ Table of Contents
+
 <h1 align="center">CSVTransfer</h1>
 
-## Project Description
-
-This purpose of this project is to enable the transfer of select data from an 
+This purpose of CSVTransfer is to enable the transfer of select data from an 
 arbitrary number of csv files into a new file. Data can be used to "match by" 
 effectively merging data which shares at least one match_by field with other 
 data. Regex filters can be applied to csv fields/columns. The data that does 
@@ -105,8 +104,8 @@ column. If data matches the regex, "None" will be put in this column instead.
 
 ### field_rules section
 
-The field_rules section is a place where you can specify formats for data to be 
-validated against using regex. This is entirely optional. Data that does not 
+If you choose to include it, the field_rules section is a place where you can 
+specify formats for data to be validated against using regex. Data that does not 
 match the given regex for a given header will not be transferred and counts 
 towards the unmatched data.
 
@@ -123,7 +122,7 @@ right format or that certain fields contain words or phrases. Meanwhile,
 field_rules functions more as a filter applied to data being transferred to get
 rid of bad data.
 
-## Config File Fields
+## Config File Fields (and what to put in them)
 
 ### defaults section
 **header_row_num**
