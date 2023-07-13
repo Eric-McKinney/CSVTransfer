@@ -157,10 +157,12 @@ def validate_config(config: configparser.ConfigParser) -> str:
     if base_sections_exist and not valid_file_names(config["sources"].values()):
         err_msg += "Invalid source file name(s). Ensure the paths are correct in the config file\n"
 
-    # Identify missing sources
+    # Identify missing source sections
+    missing_sources = []
     for source in config["sources"]:
         if source not in config:
             err_msg += f"Source section \"{source}\" not found\n"
+            missing_sources.append(source)
         elif base_sections_exist:
             for key in config["defaults"]:
                 if key not in config[source]:
@@ -173,7 +175,10 @@ def validate_config(config: configparser.ConfigParser) -> str:
     # Identify missing variables
     if base_sections_exist:
         for source in config["sources"]:
-            # Identify missing variables in each source section
+            # Identify missing variables in each source section if the section exists
+            if source in missing_sources:
+                continue
+
             for key in ["target_columns", "header_row_num"]:
                 not_in_source = key not in config[source]
                 not_in_defaults = key not in config["defaults"]
