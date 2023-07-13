@@ -80,8 +80,8 @@ same as the name you put in the sources section. In this section there needs
 to be the following fields: target_columns, column_names, match_by,
 match_by_names, header_row_num, and ignored_rows. Descriptions for what each
 of these fields entails can be found below in 
-[Config File Fields](#config-file-fields). All of these fields need
-values unless they appear in (and have values in) the defaults section.
+[Config File Fields](#config-file-fields-and-what-to-put-in-them). All of these 
+fields need values unless they appear in (and have values in) the defaults section.
 
 ### output section
 
