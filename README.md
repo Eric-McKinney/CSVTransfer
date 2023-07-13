@@ -1,3 +1,4 @@
+↖ Table of Contents
 # CSVTransfer
 
 ## Project Description
@@ -267,8 +268,6 @@ file_name = test_outputs/output.csv
 unmatched_file_name =
 # valid dialects: unix, excel, excel_tab
 dialect = excel
-
-[field_rules]
 ```
 
 # Feedback
