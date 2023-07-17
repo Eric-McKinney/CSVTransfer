@@ -293,6 +293,27 @@ UTF-8-BOM which caused a KeyError while transferring data. The fix was to find
 a way to save the csv using UTF-8. I did this using Notepad++, but in theory as
 long as you can find a way to change the encoding it should work.
 
+### Line contains NUL (and other csv reading errors)
+
+Another problem I have run into is `_csv.Error: line contains NUL` which is an
+error that occurs when a csv is being read. Unfortunately due to the nature of
+the error it would be difficult for me to circumvent these errors via ignored_rows
+in the config file. Even if it could be done I believe an issue of this caliber
+with the csv file shouldn't just be ignored. To fix this, the problematic line
+will need to be edited or removed outright from the csv. To find out what line
+number to edit, use the `--debug` flag which will print each row as it is read
+and parsed along with the row number. Bear in mind that the row number will not
+line up exactly with the line number because the row number starts at 0, some 
+rows may take up multiple lines of text in the csv file, and the row that actually
+causes the error won't be printed due to it causing the program to terminate. 
+It should give you a reasonable idea of where to look though. Usually issues 
+large enough to cause failures like these can be spotted easily. In my case the 
+line containing NUL was easily spotted using Notepad++ since it highlights NUL.
+In notepad NUL is very difficult to spot since it either looks like whitespace or
+just isn't shown at all. Once you find the problematic line it's up to you what 
+you want to do with it. All I had to do was remove all instances of NUL to resolve 
+the issue.
+
 # Feedback
 
 Feel free to give me feedback at ericmckinney@gmail.com or through GitHub.
