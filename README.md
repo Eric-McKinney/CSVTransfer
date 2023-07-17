@@ -2,12 +2,12 @@
 
 <h1 align="center">CSVTransfer</h1>
 
-This purpose of CSVTransfer is to enable the transfer of select data from an 
+The purpose of CSVTransfer is to enable the transfer of select data from an 
 arbitrary number of csv files into a new file. Data can be used to "match by" 
 effectively merging data which shares at least one match_by field with other 
 data. Regex filters can be applied to csv fields/columns. The data that does 
 not match these filters and other data considered unmatched can be output to 
-a file.
+a file as well.
 
 ## Setup
 Download `main.py`, `config_template.ini`, and optionally this `README.md` for 
