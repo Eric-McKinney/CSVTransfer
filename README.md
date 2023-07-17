@@ -275,6 +275,24 @@ unmatched_file_name =
 dialect = excel
 ```
 
+## Troubleshooting
+
+I tried my best to catch incorrect config file usage and give helpful error
+messages, so if a runtime exception occurs it will most likely be due to the csv
+and not the config file. In the case that things are not going smoothly I have
+documented some issues that I've run into and the fixes I used below. If your
+issue is not among them or the fix doesn't work, then please let me know via
+email (ericmckinney.md@gmail.com). You can always search for your own fixes and
+use an IDE of your choice to debug my code as well. If you do find a fix, then
+please document it and let me know by creating a pull request or emailing me.
+
+### CSV File Encoding
+
+I have run into a problem with file encoding before where the csv was encoded with
+UTF-8-BOM which caused a KeyError while transferring data. The fix was to find
+a way to save the csv using UTF-8. I did this using Notepad++, but in theory as
+long as you can find a way to change the encoding it should work.
+
 # Feedback
 
 Feel free to give me feedback at ericmckinney@gmail.com or through GitHub.
