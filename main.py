@@ -415,7 +415,7 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
                         if header == "Sources found in":  # append source name to output under "sources found in"
                             if header not in out_row.keys():
                                 out_row[header] = data_to_transfer[header]
-                            else:
+                            elif source_name not in out_row[header].split(", "):  # avoid duplicates of source names
                                 out_row[header] += f", {data_to_transfer[header]}"
 
                             continue
