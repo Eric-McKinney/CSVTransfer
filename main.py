@@ -24,8 +24,6 @@ import re
 import sys
 from typing import Iterable
 
-# TODO: Make README easier to read (both formatting and language)
-
 # Custom type aliases for clarity
 Header = str
 Data = str
