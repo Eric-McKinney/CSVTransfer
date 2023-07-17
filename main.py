@@ -163,7 +163,8 @@ def validate_config(config: configparser.ConfigParser) -> str:
     missing_sources = []
     for source in config["sources"]:
         if source not in config:
-            err_msg += f"Source section \"{source}\" not found\n"
+            err_msg += f"Source section \"{source}\" not found. Values are made lowercase and sections names are case" \
+                       f" sensitive. Write your source section names in lower case if that's the issue\n"
             missing_sources.append(source)
         elif base_sections_exist:
             for key in config["defaults"]:
