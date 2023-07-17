@@ -52,8 +52,9 @@ OPTIONS
 
 POTENTIAL ISSUES
 \tFile encoding
-\t\tCheck if the file is encoded with something like "UTF-8 with BOM". You can probably just open in Notepad++ and save
-\t\tin UTF-8 which will fix this. You may have to experiment with other methods if not.
+\t\tCheck if the file is encoded with something like UTF-8-BOM. You can probably just 
+\t\topen in Notepad++ and save in UTF-8 which will fix this. You may have to experiment with 
+\t\tother methods if not.
 """
 
 
