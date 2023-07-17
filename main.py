@@ -49,6 +49,11 @@ OPTIONS
 \t\tIf data after the first source does not match in at least one of the 
 \t\tmatch_by fields, then the data is considered unmatched as opposed to 
 \t\tbeing appended to the output in its own row
+
+POTENTIAL ISSUES
+\tFile encoding
+\t\tCheck if the file is encoded with something like "UTF-8 with BOM". You can probably just open in Notepad++ and save
+\t\tin UTF-8 which will fix this. You may have to experiment with other methods if not.
 """
 
 
