@@ -80,11 +80,11 @@ make a section for each source by the same name you gave in this section.
 
 Each source you plan to use and have listed in the sources section need a
 section to specify how they should be handled. The section name should be the
-same as the name you put in the sources section. It does need to be in lowercase
-as values are converted to lowercase when parsed, but section names remain 
-case-sensitive. In this section there needs to be the following fields: 
-target_columns, column_names, match_by, match_by_names, header_row_num, and 
-ignored_rows. Descriptions for what each of these fields entails can be found 
+same as the name you put in the sources section. Additionally, the section name 
+needs to be in lowercase as keys are converted to lowercase when parsed, but 
+section names are case-sensitive. In this section there needs to be the following 
+fields: target_columns, column_names, match_by, match_by_names, header_row_num, 
+and ignored_rows. Descriptions for what each of these fields entails can be found 
 below in [Config File Fields](#config-file-fields-and-what-to-put-in-them). 
 All of these fields need values unless they appear in (and have values in) 
 the defaults section.
