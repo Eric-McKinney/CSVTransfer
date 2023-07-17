@@ -43,7 +43,11 @@ output in its own row.
 By default, the script uses `config_template.ini` for configuration. If you 
 want to use a config file by a different name, open `main.py` and change 
 the `CONFIG_FILE_NAME` variable accordingly. The `config_template.ini` file 
-has a few bits filled out already. Fill in the rest as described below. 
+has a few bits filled out already. Fill in the rest as described below. It is
+worth noting that although the config file is an ini file, and it follows the
+ini format generally, the library used to parse the config file is
+[configparser](https://docs.python.org/3/library/configparser.html#supported-ini-file-structure)
+and supported formatting can be seen in the embedded link.
 
 ## Config File Sections
 
