@@ -301,9 +301,9 @@ the error it would be difficult for me to circumvent these errors via ignored_ro
 in the config file. Even if it could be done I believe an issue of this caliber
 with the csv file shouldn't just be ignored. To fix this, the problematic line
 will need to be edited or removed outright from the csv. To find out what line
-number to edit, use the `--debug` flag which will print each row as it is read
-and parsed along with the row number. Bear in mind that the row number will not
-line up exactly with the line number because the row number starts at 0, some 
+number to edit, rerun using the `--debug` flag which will print each row as it is 
+read and parsed along with the row number. Bear in mind that the row number will 
+not line up exactly with the line number because the row number starts at 0, some 
 rows may take up multiple lines of text in the csv file, and the row that actually
 causes the error won't be printed due to it causing the program to terminate. 
 It should give you a reasonable idea of where to look though. Usually issues 
