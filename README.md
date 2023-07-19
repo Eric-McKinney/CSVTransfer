@@ -293,6 +293,26 @@ UTF-8-BOM which caused a KeyError while transferring data. The fix was to find
 a way to save the csv using UTF-8. I did this using Notepad++, but in theory as
 long as you can find a way to change the encoding it should work.
 
+### Unicode and Asian Characters
+
+You may run into a `UnicodeDecodeError: 'charmap' codec can't decode byte 0x8d
+in position 1906: character maps to <undefined>` or something similar when your
+csv contains some characters from asian languages or other unicode characters.
+This isn't so much a problem with unicode or asian characters themselves, but a
+problem resulting from the presence of them combined with the way Excel exports
+spreadsheets to csv files. To avoid issues caused by this, export from Excel
+using the "Unicode Text" option which will create a tab-separated UTF-16 file.
+From there you should save it as a csv in UTF-8 choosing to replace the tabs with
+commas if you feel inclined to do so (CSVTransfer can parse tab-separated csvs).
+You can use any tool you want to accomplish this, but in my experience Notepad++ 
+did the job just fine. 
+
+If these characters are still causing trouble, or for whatever reason you only 
+have the csv to work with, you can attempt to remove any troublesome characters 
+manually. It can be useful to use a hex editor to search for the troublesome byte 
+shown in the error message where from there you can identify the character in 
+question as well as where to find it in your csv file.
+
 ### Line contains NUL (and other csv reading errors)
 
 Another problem I have run into is `_csv.Error: line contains NUL` which is an
