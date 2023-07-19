@@ -411,7 +411,8 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
         # attempt to find a match
         for out_row in output_copy:
             for match in match_by:
-                if out_row[names_map[match]] == row[match]:
+                out_match = names_map[match]
+                if out_match in out_row and out_row[out_match] == row[match]:
                     found_match = True
                     for header in data_to_transfer:
                         if header == "Sources found in":  # append source name to output under "sources found in"
