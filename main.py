@@ -392,7 +392,7 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
     """
 
     first_source: bool = output == []
-    output_copy = output.copy()  # needed for when we search for matches while potentially appending after each loop
+    buffer: list[dict] = []  # Buffering instead of appending to output directly to avoid matching data from same source
     unmatched_data: list[dict] = []
     for row in source:
         data_to_transfer: dict[Header: str] = {}  # will contain only the data we want to transfer from the row
@@ -412,10 +412,8 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
             unmatched_data.append(data)
             continue
 
-        # TODO: Generally optimize match finding
-        # TODO: Buffer data being appended to output instead of making a copy of the output
-        # attempt to find a match
-        for out_row in output_copy:
+        # attempt to find a match and transfer data if it would go into an empty field
+        for out_row in output:
             if rows_match(row, out_row, match_by, names_map):
                 found_match = True
 
@@ -433,13 +431,15 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
                         out_row[header] = data_to_transfer[header]
 
         if (not strict or first_source) and not found_match:
-            output.append(data_to_transfer)
+            buffer.append(data_to_transfer)
         elif unmatched_output not in [None, ""] and not found_match:
             data = {"Sources found in": source_name, "Reason it didn't match": "Strict on and no match found"}
             for header in names_map:
                 data[header] = row[header]
 
             unmatched_data.append(data)
+
+    output.extend(buffer)
 
     if unmatched_output not in [None, ""]:
         append = not first_source
