@@ -409,28 +409,24 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
             continue
 
         # TODO: Generally optimize match finding
-        # TODO: Make find_match its own function
         # TODO: Buffer data being appended to output instead of making a copy of the output
         # attempt to find a match
         for out_row in output_copy:
-            for match in match_by:
-                out_match = names_map[match]
-                if out_match in out_row and out_row[out_match] == row[match]:
-                    found_match = True
-                    for header in data_to_transfer:
-                        if header == "Sources found in":  # append source name to output under "sources found in"
-                            if header not in out_row.keys():
-                                out_row[header] = data_to_transfer[header]
-                            elif source_name not in out_row[header].split(", "):  # avoid duplicates of source names
-                                out_row[header] += f", {data_to_transfer[header]}"
+            if rows_match(row, out_row, match_by, names_map):
+                found_match = True
 
-                            continue
-
-                        # check if data is already there before moving data
-                        if header not in out_row.keys() or out_row[header] in ["", None]:
+                for header in data_to_transfer:
+                    if header == "Sources found in":  # append source name to output under "sources found in"
+                        if header not in out_row.keys():
                             out_row[header] = data_to_transfer[header]
+                        elif source_name not in out_row[header].split(", "):  # avoid duplicates of source names
+                            out_row[header] += f", {data_to_transfer[header]}"
 
-                    break
+                        continue
+
+                    # check if data is already there before moving data
+                    if header not in out_row.keys() or out_row[header] in ["", None]:
+                        out_row[header] = data_to_transfer[header]
 
         if (not strict or first_source) and not found_match:
             output.append(data_to_transfer)
@@ -451,6 +447,30 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
             headers: list[str] = ["Sources found in", "Reason it didn't match"]
             headers.extend(names_map.keys())
             write_csv(unmatched_output, headers, unmatched_data, dialect, append=append)
+
+
+def rows_match(row: dict[Header: Data], out_row: dict[Header: Data], match_by: list[Header],
+               names_map: dict[Header: Header]) -> bool:
+    """
+    Determines whether two rows match one another. Two rows are considered matching if the data under one or more
+    specified headers is identical. For the row parameter this means the headers in the match_by list. For the out_row
+    parameter this means the headers that are mapped (values) to the headers in the match_by (keys) in the names_map.
+
+    :param row: Row from source
+    :param out_row: Row in output
+    :param match_by: Headers to match data by
+    :param names_map: Mapping of headers in sources to headers in the output
+    :return: True if the rows match, false if not
+    """
+    matches = False
+
+    for match in match_by:
+        out_match = names_map[match]
+        if out_match in out_row and out_row[out_match] == row[match]:
+            matches = True
+            break
+
+    return matches
 
 
 def data_matches_regex(data: dict[Header: str], names_map: dict[Header: Header], regex: dict[Header: str]) -> bool:
