@@ -113,6 +113,10 @@ def main(args: list[str] = None):
     headers: list[str] = unify_headers(cols_name_mapping)
     write_csv(config["output"]["file_name"], headers, merged_data, config["output"]["dialect"])
     print(f"DONE\n\nResults can be found in {config['output']['file_name']}")
+
+    if config["output"]["unmatched_file_name"] not in [None, ""]:
+        print(f"Unmatched data can be found in {config['output']['unmatched_file_name']}")
+
     print("="*80)
 
 
@@ -583,7 +587,7 @@ def write_csv(file_name: str, headers: list[str], data: list[Row], dialect: str,
         if overwrite in ["y", "yes"]:
             write_data(file_name, "w", headers, data, dialect)
         else:
-            raise SystemExit()
+            return
 
 
 def write_data(file_name: str, mode, headers: list[str], data: list[Row], dialect: str) -> None:
