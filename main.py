@@ -408,6 +408,9 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
             unmatched_data.append(data)
             continue
 
+        # TODO: Generally optimize match finding
+        # TODO: Make find_match its own function
+        # TODO: Buffer data being appended to output instead of making a copy of the output
         # attempt to find a match
         for out_row in output_copy:
             for match in match_by:
