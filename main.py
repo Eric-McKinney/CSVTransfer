@@ -29,6 +29,9 @@ Header = str
 Data = str
 Row = dict[Header: Data]
 
+# TODO: Figure out why Gabby Barnhart's iPhone is so weird
+# TODO: Fix config file case sensitivity w/source names
+
 CONFIG_FILE_NAME: str = "config_template.ini"
 DEBUG: bool = False  # either change this here or use --debug from command line
 HELP_MSG = """USAGE
