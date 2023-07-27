@@ -544,6 +544,7 @@ def enforce_source_rules(data: list[Row], rules: dict[str: dict[Header: str]]) -
                           file=sys.stderr)
                     raise SystemExit("\nStopped at first source_rule error. Make sure to correct all faulty source "
                                      "rules")
+                    # TODO: Move this to config file validation and have it catch all invalid source rules
 
         if rules_broken == "":
             row["Source rules broken"] = "None"
