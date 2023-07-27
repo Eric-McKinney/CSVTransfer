@@ -29,9 +29,6 @@ Header = str
 Data = str
 Row = dict[Header: Data]
 
-# TODO: Figure out why Gabby Barnhart's iPhone is so weird
-# TODO: Fix config file case sensitivity w/source names
-
 CONFIG_FILE_NAME: str = "config_template.ini"
 DEBUG: bool = False  # either change this here or use --debug from command line
 HELP_MSG = """USAGE
@@ -123,6 +120,13 @@ def main(args: list[str] = None):
     print("="*80)
 
 
+def make_sections_lowercase(config: configparser.ConfigParser) -> None:
+    for section in config.sections():
+        if not section.islower():
+            config[section.lower()] = config[section]
+            config.remove_section(section)
+
+
 def valid_file_names(file_names: Iterable[str]) -> bool:
     """
     Determines if file names in config file are valid. File names should be relative paths of files that are within the
@@ -171,8 +175,7 @@ def validate_config(config: configparser.ConfigParser) -> str:
     missing_sources = []
     for source in config["sources"]:
         if source not in config:
-            err_msg += f"Source section \"{source}\" not found. Values are made lowercase and sections names are case" \
-                       f" sensitive. Write your source section names in lower case if that's the issue\n"
+            err_msg += f"Source section \"{source}\" not found\n"
             missing_sources.append(source)
         elif base_sections_exist:
             for key in config["defaults"]:
@@ -251,6 +254,7 @@ def get_config_constants() -> configparser.ConfigParser:
 
     config = configparser.ConfigParser(allow_no_value=True)
     config.read(CONFIG_FILE_NAME)
+    make_sections_lowercase(config)
     errors = validate_config(config)
 
     if errors != "":
