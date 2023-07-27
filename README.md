@@ -46,8 +46,9 @@ the `CONFIG_FILE_NAME` variable accordingly. The `config_template.ini` file
 has a few bits filled out already. Fill in the rest as described below. It is
 worth noting that although the config file is an ini file, and it follows the
 ini format generally, the library used to parse the config file is
-[configparser](https://docs.python.org/3/library/configparser.html#supported-ini-file-structure)
-and supported formatting can be seen in the embedded link.
+[configparser](https://docs.python.org/3/library/configparser.html#supported-ini-file-structure).
+Supported formatting can be seen in the embedded link to the configparser
+documentation.
 
 ## Config File Sections
 
@@ -80,14 +81,11 @@ make a section for each source by the same name you gave in this section.
 
 Each source you plan to use and have listed in the sources section need a
 section to specify how they should be handled. The section name should be the
-same as the name you put in the sources section. Additionally, the section name 
-needs to be in lowercase as keys are converted to lowercase when parsed, but 
-section names are case-sensitive. In this section there needs to be the following 
-fields: target_columns, column_names, match_by, match_by_names, header_row_num, 
-and ignored_rows. Descriptions for what each of these fields entails can be found 
-below in [Config File Fields](#config-file-fields-and-what-to-put-in-them). 
-All of these fields need values unless they appear in (and have values in) 
-the defaults section.
+same as the name you put in the sources section. In this section there needs to 
+be the following fields: target_columns, column_names, match_by, match_by_names, 
+header_row_num, and ignored_rows. Descriptions for what each of these fields 
+entails can be found below in [Config File Fields](#config-file-fields-and-what-to-put-in-them). All of these fields need 
+values unless they appear in (and have values in) the defaults section.
 
 ### output section
 
