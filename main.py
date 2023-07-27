@@ -473,7 +473,7 @@ def rows_match(row: dict[Header: Data], out_row: dict[Header: Data], match_by: l
 
     for match in match_by:
         out_match = names_map[match]
-        if out_match in out_row and out_row[out_match] == row[match]:
+        if out_match in out_row and row[match] != "" and out_row[out_match] == row[match]:
             matches = True
             break
 
