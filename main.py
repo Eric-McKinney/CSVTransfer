@@ -120,13 +120,6 @@ def main(args: list[str] = None):
     print("="*80)
 
 
-def make_sections_lowercase(config: configparser.ConfigParser) -> None:
-    for section in config.sections():
-        if not section.islower():
-            config[section.lower()] = config[section]
-            config.remove_section(section)
-
-
 def valid_file_names(file_names: Iterable[str]) -> bool:
     """
     Determines if file names in config file are valid. File names should be relative paths of files that are within the
@@ -253,8 +246,8 @@ def get_config_constants() -> configparser.ConfigParser:
                          f"script.")
 
     config = configparser.ConfigParser(allow_no_value=True)
+    config.optionxform = str
     config.read(CONFIG_FILE_NAME)
-    make_sections_lowercase(config)
     errors = validate_config(config)
 
     if errors != "":
@@ -543,8 +536,14 @@ def enforce_source_rules(data: list[Row], rules: dict[str: dict[Header: str]]) -
             for header in rules[source_name]:
                 regex = rules[source_name][header]
 
-                if re.search(pattern=regex, string=row[header]) is None:
-                    rules_broken += f"{source_name}:{header}" if rules_broken == "" else f", {source_name}:{header}"
+                try:
+                    if re.search(pattern=regex, string=row[header]) is None:
+                        rules_broken += f"{source_name}:{header}" if rules_broken == "" else f", {source_name}:{header}"
+                except KeyError:
+                    print(f"{source_name}_rule error: Could not find the header \"{header}\" in output data",
+                          file=sys.stderr)
+                    raise SystemExit("\nStopped at first source_rule error. Make sure to correct all faulty source "
+                                     "rules")
 
         if rules_broken == "":
             row["Source rules broken"] = "None"
