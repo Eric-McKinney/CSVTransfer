@@ -336,7 +336,7 @@ def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
     :return: List of the rows of the csv
     """
     try:
-        with open(file_name, newline='') as csvfile:
+        with open(file_name, newline='', errors="ignore") as csvfile:
             dialect = csv.Sniffer().sniff(csvfile.readline())
             csvfile.seek(0)
 
@@ -370,8 +370,8 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
     Moves data from columns in the source whose headers appear in names_map to the output under the corresponding header
     name that appear in the names_map. A match of the data transferred this way is attempted. The data is matched
     against data that exists in the output under the headers that appear in the names_map as values associated with the
-    keys that are contained in match_by. If a match is found then any data that can fill an empty field will be
-    transferred, otherwise nothing will be done and data not transferred this way does not count towards the unmatched
+    keys that are contained in match_by. If a match is found then any data from that row that can fill an empty field
+    will be transferred. For the rest of the data from that row nothing will be done (it won't be considered unmatched).
     data. If a match cannot be found then the data to be transferred will be appended to the output as long as strict is
     not true. If strict is true then this data will contribute to the unmatched data instead of being included in the
     output. If regex is given, all data from fields being transferred must match the associated regex to be transferred.
