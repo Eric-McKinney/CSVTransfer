@@ -435,7 +435,7 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
         for header in names_map:
             data_to_transfer[names_map[header]] = row[header]
 
-        if regex is not None and not data_matches_regex(data_to_transfer, names_map, regex):
+        if regex is not None and not data_matches_regex(data_to_transfer, regex):
             data = {"Sources found in": source_name, "Reason it didn't match": "Data didn't match regex/field_rule"}
             for header in names_map:
                 data[header] = row[header]
@@ -508,13 +508,12 @@ def rows_match(row: dict[Header: Data], out_row: dict[Header: Data], match_by: l
     return matches
 
 
-def data_matches_regex(data: dict[Header: str], names_map: dict[Header: Header], regex: dict[Header: str]) -> bool:
+def data_matches_regex(data: dict[Header: str], regex: dict[Header: str]) -> bool:
     """
     Checks if given row's data that is being transferred matches the given regex for specific fields/headers. If a regex
     appears that refers to data not being transferred, it will be ignored.
 
     :param data: Dictionary of headers (keys) and associated data (values)
-    :param names_map: Mapping of headers in source to headers in output
     :param regex: Dictionary of headers (keys) and associated regex (values) for data to match
     :return: True if all data matches given regex, false otherwise
     """
