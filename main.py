@@ -85,13 +85,13 @@ def main(args: list[str] = None):
 
     config: configparser.ConfigParser = get_config_constants()
 
-    print("="*80)
-
     merged_data: list[Row] = []
     cols_name_mapping: dict = map_columns_names(config)
     headers: list[str] = unify_headers(cols_name_mapping)
 
     validate_rules(config, headers)
+
+    print("="*80)
 
     # NOTE: The order of headers in each row dict doesn't matter,
     #       only the order in which they are passed to the DictWriter (fieldnames param) matters
