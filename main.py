@@ -89,6 +89,10 @@ def main(args: list[str] = None):
 
     merged_data: list[Row] = []
     cols_name_mapping: dict = map_columns_names(config)
+    headers: list[str] = unify_headers(cols_name_mapping)
+
+    validate_rules(config, headers)
+
     # NOTE: The order of headers in each row dict doesn't matter,
     #       only the order in which they are passed to the DictWriter (fieldnames param) matters
     for source in config["sources"]:
@@ -110,7 +114,6 @@ def main(args: list[str] = None):
     print("DONE", flush=True)
 
     print("Writing results to output file...", end="", flush=True)
-    headers: list[str] = unify_headers(cols_name_mapping)
     write_csv(config["output"]["file_name"], headers, merged_data, config["output"]["dialect"])
     print(f"DONE\n\nResults can be found in {config['output']['file_name']}")
 
@@ -143,14 +146,14 @@ def valid_file_names(file_names: Iterable[str]) -> bool:
     return True
 
 
-def validate_config(config: configparser.ConfigParser) -> str:
+def validate_config(config: configparser.ConfigParser) -> None:
     """
     Checks the parsed config file for improper inputs, missing information, and other improper usage. While checking for
     these errors, error messages are accumulated and returned after the config file has been fully checked. If there
-    were no errors detected then the string returned will be empty.
+    were errors detected then the program will print the error messages and exit.
 
     :param config: Parsed config file
-    :return: String with messages for all errors detected or an empty string
+    :return:
     """
     err_msg = ""
     base_sections_exist = True
@@ -227,7 +230,38 @@ def validate_config(config: configparser.ConfigParser) -> str:
             if rule in [None, ""]:
                 err_msg += f"Empty rule for {header} in field_rules\n"
 
-    return err_msg.rstrip()
+    if err_msg != "":
+        raise SystemExit(err_msg.rstrip())
+
+
+def validate_rules(config: configparser.ConfigParser, output_headers: list[Header]) -> None:
+    """
+    Validates the field and source rules from the config file. All field and source rules should apply to a header that
+    appears in the output otherwise an appropriate error message will be generated. The program will exit after
+    accumulating all applicable error messages and printing them out.
+
+    :param config: Parsed config file
+    :param output_headers: List of headers that will appear in the output
+    :return:
+    """
+
+    err_msg = ""
+
+    if "field_rules" in config:
+        for rule in config["field_rules"]:
+            if rule not in output_headers:
+                err_msg += f"field_rule error: Could not find the header \"{rule}\" in output headers\n"
+
+    for source in config["sources"]:
+        rules_section = f"{source}_rules"
+
+        if rules_section in config:
+            for rule in config[rules_section]:
+                if rule not in output_headers:
+                    err_msg += f"{rules_section} error: Could not find the header \"{rule}\" in output headers\n"
+
+    if err_msg != "":
+        raise SystemExit(err_msg.rstrip())
 
 
 def get_config_constants() -> configparser.ConfigParser:
@@ -248,10 +282,7 @@ def get_config_constants() -> configparser.ConfigParser:
     config = configparser.ConfigParser(allow_no_value=True)
     config.optionxform = str
     config.read(CONFIG_FILE_NAME)
-    errors = validate_config(config)
-
-    if errors != "":
-        raise SystemExit(errors)
+    validate_config(config)
 
     # Set all values of keys in sources appear in defaults to defaults if not set
     # (configparser does this but for all sections, and I don't want that)
@@ -488,9 +519,6 @@ def data_matches_regex(data: dict[Header: str], names_map: dict[Header: Header],
     :return: True if all data matches given regex, false otherwise
     """
     for header in regex:
-        if header not in names_map.values():  # if regex applies to a field not being transferred do nothing
-            continue
-
         if re.search(pattern=regex[header], string=data[header]) is None:
             return False
 
@@ -536,15 +564,8 @@ def enforce_source_rules(data: list[Row], rules: dict[str: dict[Header: str]]) -
             for header in rules[source_name]:
                 regex = rules[source_name][header]
 
-                try:
-                    if re.search(pattern=regex, string=row[header]) is None:
-                        rules_broken += f"{source_name}:{header}" if rules_broken == "" else f", {source_name}:{header}"
-                except KeyError:
-                    print(f"{source_name}_rule error: Could not find the header \"{header}\" in output data",
-                          file=sys.stderr)
-                    raise SystemExit("\nStopped at first source_rule error. Make sure to correct all faulty source "
-                                     "rules")
-                    # TODO: Move this to config file validation and have it catch all invalid source rules
+                if re.search(pattern=regex, string=row[header]) is None:
+                    rules_broken += f"{source_name}:{header}" if rules_broken == "" else f", {source_name}:{header}"
 
         if rules_broken == "":
             row["Source rules broken"] = "None"
