@@ -13,7 +13,8 @@ a file as well.
 Download `main.py`, `config_template.ini`, and optionally this `README.md` for 
 future reference (I don't have anything fancy set up you have to do it 
 through GitHub lol). Once you've done that, make sure you have python 
-installed. After that you should be good to go.
+installed. Next, you need to fill out the config template as described further
+down in this README. After that you should be good to go.
 
 ## Usage
 For this script to be able to see and read the csv files they must be in the
@@ -40,6 +41,7 @@ fields then the data is considered unmatched as opposed to being appended to the
 output in its own row.
 
 ## Config File
+
 By default, the script uses `config_template.ini` for configuration. If you 
 want to use a config file by a different name, open `main.py` and change 
 the `CONFIG_FILE_NAME` variable accordingly. The `config_template.ini` file 
@@ -49,6 +51,17 @@ ini format generally, the library used to parse the config file is
 [configparser](https://docs.python.org/3/library/configparser.html#supported-ini-file-structure).
 Supported formatting can be seen in the embedded link to the configparser
 documentation.
+
+## Config File Generator
+
+If you don't want to bother with filling out the config file yourself, I made a
+script that will generate one for you. Simply download `config_gen.py` from this
+repo and run it. The script will prompt you for everything you could fill out 
+manually, perform rudimentary validation of your inputs, and create the config
+file with proper formatting based on your inputs. I tried to make it intuitive,
+or at least more intuitive than filling out the config file by hand, but it
+isn't perfect. Please [let me know your critiques](#Feedback), so I can try to 
+improve.
 
 ## Config File Sections
 
