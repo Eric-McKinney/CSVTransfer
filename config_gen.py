@@ -1,8 +1,9 @@
 import configparser
 import os
 
-
 SPECIAL_CHARS = ["*", "'", '"', "?", "!", "^", "`", "$", "/", "\\", "#", "&", "@", "|"]
+MAJOR_SEPARATOR = "=" * 80
+MINOR_SEPARATOR = "/" + "-"*45 + "/"
 
 
 def main():
@@ -25,12 +26,16 @@ def main():
         "ignored_rows": "-1"
     }
 
-    collect_sources_info(config, num_sources)
+    print(MAJOR_SEPARATOR)
+    valid_headers = collect_sources_info(config, num_sources)
     collect_output_info(config)
-    collect_field_rules(config)
+    print(MAJOR_SEPARATOR)
+    collect_field_rules(config, valid_headers)
+    print(MAJOR_SEPARATOR)
 
     with open(config_name, "w") as configfile:
         config.write(configfile)
+        print(f"{config_name} written")
 
 
 def contains_special_chars(s: str) -> bool:
@@ -50,8 +55,12 @@ def validate_name_input(prompt: str, allow_empty: bool = False) -> str:
     return val
 
 
-def validate_number_input(prompt: str) -> str:
+def validate_number_input(prompt: str, allow_empty: bool = False) -> str:
     val = input(prompt)
+
+    if allow_empty and val == "":
+        return val
+
     while not val.isdigit() or int(val) < 0:
         print(f"\"{val}\" is not a valid number")
         val = input(prompt)
@@ -59,29 +68,37 @@ def validate_number_input(prompt: str) -> str:
     return val
 
 
-def collect_sources_info(config, num_sources: int) -> None:
+def collect_sources_info(config, num_sources: int) -> set[str]:
     config["sources"] = {}
+    valid_headers = set()
 
     for i in range(num_sources):
         print(f"Source {i + 1}:\n")
 
         source_name = validate_name_input(f"Give a name for source {i + 1}: ")
+        print(MINOR_SEPARATOR)
 
         csv_path = input(f"Path (absolute or relative to main.py & this script) to the csv file for {source_name}: ")
         while not os.path.isfile(csv_path):
             print(f"{csv_path} either doesn't exist or is not a file.")
             csv_path = input(f"Path to the csv file for {source_name}: ")
+        print(MINOR_SEPARATOR)
 
         col_names_map = collect_target_cols()
+        print(MINOR_SEPARATOR)
         target_cols = ",".join(col_names_map.keys())
         col_names = ",".join(col_names_map.values())
         match_by_names_map = collect_match_by()
+        print(MINOR_SEPARATOR)
         match_by = ",".join(match_by_names_map.keys())
         match_by_names = ",".join(match_by_names_map.values())
         header_row = validate_number_input(prompt="Header row number (count starting at 0): ")
-        ignored_rows = validate_number_input(prompt="Ignored row numbers (also starting at 0): ")
+        print(MINOR_SEPARATOR)
+        ignored_rows = collect_ignored_rows()
+        print(MINOR_SEPARATOR)
         print("Source rules are regex filters used to flag data. Write the regex so that proper data will match it.")
-        rules = collect_rules()
+        valid_headers = {*valid_headers, *col_names_map.values(), *match_by_names_map.values()}
+        rules = collect_rules(valid_headers)
 
         config["sources"][source_name] = csv_path
         config[source_name] = {
@@ -94,21 +111,40 @@ def collect_sources_info(config, num_sources: int) -> None:
         }
         config[f"{source_name}_rules"] = rules
 
+        print(MAJOR_SEPARATOR)
 
-def collect_field_rules(config) -> None:
+    return valid_headers
+
+
+def collect_ignored_rows() -> str:
+    ignored_rows = set()
+
+    print("Row numbers will be collected until an empty input is given.")
+    row = validate_number_input(prompt="Row to ignore (also starting at 0): ", allow_empty=True)
+    while row != "":
+        row = validate_number_input(prompt="Row to ignore (also starting at 0): ", allow_empty=True)
+        if row == "":
+            break
+        ignored_rows.add(row)
+
+    return ",".join(ignored_rows)
+
+
+def collect_field_rules(config, valid_headers: set[str]) -> None:
     print("Field rules are regex filters that allow you to control what gets included in the output. Write the regex "
           "so proper data matches.")
-    rules = collect_rules()
+
+    rules = collect_rules(valid_headers)
 
     config["field_rules"] = rules
 
 
-def collect_rules() -> dict:
+def collect_rules(valid_headers: set[str]) -> dict:
     rules = {}
 
     print("Rules will be collected until an empty header is given\n")
 
-    header = input("Header (that will appear in output) to apply rule to: ")
+    header = validate_header_for_rule(valid_headers)
     if header == "":
         return rules
     rule = input("Regex to apply to header: ")
@@ -116,12 +152,21 @@ def collect_rules() -> dict:
     while header != "":
         rules[header] = rule
 
-        header = input("Header (that will appear in output) to apply rule to: ")
+        header = validate_header_for_rule(valid_headers)
         if header == "":
             break
         rule = input("Regex to apply to header: ")
 
     return rules
+
+
+def validate_header_for_rule(valid_headers: set[str]) -> str:
+    header = input("Header (that will appear in output) to apply rule to: ")
+    while header not in valid_headers and header != "":
+        print(f"\"{header}\" not found in headers that will appear in the output.")
+        header = input("Header (that will appear in output) to apply rule to: ")
+
+    return header
 
 
 def collect_target_cols():
@@ -169,7 +214,9 @@ def collect_output_info(config) -> None:
     config["output"] = {}
 
     output_file_name = validate_name_input(prompt="Output file name: ")
+    print(MINOR_SEPARATOR)
     unmatched_file_name = validate_name_input(prompt="Name of file to send unmatched data to: ", allow_empty=True)
+    print(MINOR_SEPARATOR)
     dialect = input("Output dialect (unix/excel_tab/[excel]): ").lower()
     if len(dialect) == 0:
         dialect = "excel"
