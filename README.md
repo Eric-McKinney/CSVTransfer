@@ -60,7 +60,7 @@ repo and run it. The script will prompt you for everything you could fill out
 manually, perform rudimentary validation of your inputs, and create the config
 file with proper formatting based on your inputs. I tried to make it intuitive,
 or at least more intuitive than filling out the config file by hand, but it
-isn't perfect. Please [let me know your critiques](#Feedback), so I can try to 
+isn't perfect. Please [let me know your critiques](#feedback), so I can try to 
 improve.
 
 ## Config File Sections
