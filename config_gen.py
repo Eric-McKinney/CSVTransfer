@@ -3,7 +3,7 @@ import os
 
 SPECIAL_CHARS = ["*", "'", '"', "?", "!", "^", "`", "$", "/", "\\", "#", "&", "@", "|"]
 MAJOR_SEPARATOR = "=" * 80
-MINOR_SEPARATOR = "/" + "-"*45 + "/"
+MINOR_SEPARATOR = "/" + "-"*78 + "/"
 
 
 def main():
