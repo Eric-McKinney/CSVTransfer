@@ -26,6 +26,7 @@ def main():
     num_sources = int(validate_number_input(prompt="Number of sources (csv files): "))
 
     config = configparser.ConfigParser()
+    config.optionxform = str
 
     config["defaults"] = {
         "header_row_num": "0",
