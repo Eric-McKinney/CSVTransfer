@@ -315,15 +315,10 @@ def map_columns_names(config: configparser.ConfigParser) -> dict[str, dict[Heade
         match_by: list[str] = config[source]["match_by"].split(",")
         match_by_names: list[str] = config[source]["match_by_names"].split(",")
 
-        # remove all empty strings from the names (happens when values are not given in config file)
-        for names in [col_names, match_by_names]:
-            to_remove = []
-            for i, name in enumerate(names):
-                if name == "":
-                    to_remove.insert(0, i)
-
-            for idx in to_remove:
-                names.__delitem__(idx)
+        # Remove empty strings (happens when config file field is left fully or partially empty)
+        for header_list in [target_cols, col_names, match_by, match_by_names]:
+            for _ in range(header_list.count("")):
+                header_list.remove("")
 
         cols_names_mapping[source] = {}
         for i, col in enumerate(match_by):
