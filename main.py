@@ -308,6 +308,8 @@ def map_columns_names(config: configparser.ConfigParser) -> dict[str, dict[Heade
     """
     cols_names_mapping: dict[str, dict[Header, Header]] = {}
 
+    # TODO: Merge target columns and match by (in terms of including from csv), then make match by names the new match
+    #  by (just determines what headers are used to match by)
     for source in config["sources"]:
         target_cols: list[str] = config[source]["target_columns"].split(",")
         col_names: list[str] = config[source]["column_names"].split(",")
