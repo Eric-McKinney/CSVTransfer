@@ -345,12 +345,12 @@ just isn't shown at all. Once you find the problematic line it's up to you what
 you want to do with it. All I had to do was remove all instances of NUL to resolve 
 the issue.
 
-# License
-
-This project is licensed under the GNU GPLv3 license which can be found in the
-GitHub repo in [LICENSE.txt](LICENSE.txt).
-
 # Feedback
 
 Feel free to give me feedback at ericmckinney@gmail.com or through GitHub.
 I'm always looking to improve and learn new things.
+
+# License
+
+This project is licensed under the GNU GPLv3 license which can be found in the
+GitHub repo in [LICENSE.txt](LICENSE.txt).
