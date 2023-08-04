@@ -60,8 +60,8 @@ repo and run it. The script will prompt you for everything you could fill out
 manually, perform rudimentary validation of your inputs, and create the config
 file with proper formatting based on your inputs. I tried to make it intuitive,
 or at least more intuitive than filling out the config file by hand, but it
-isn't perfect. Please [let me know your critiques](#license), so I can try to 
-improve.
+isn't perfect. Please [let me know your critiques](#give-me-feedback), so I can 
+try to improve.
 
 ## Config File Sections
 
@@ -345,7 +345,7 @@ just isn't shown at all. Once you find the problematic line it's up to you what
 you want to do with it. All I had to do was remove all instances of NUL to resolve 
 the issue.
 
-# Feedback
+# Give Me Feedback
 
 Feel free to give me feedback at ericmckinney@gmail.com or through GitHub.
 I'm always looking to improve and learn new things.
