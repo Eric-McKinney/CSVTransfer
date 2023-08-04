@@ -1,7 +1,13 @@
+__author__ = "Eric McKinney"
+
+"""
+Creates a config file based on a series of inputs from stdin.
+"""
+
 import configparser
 import os
 
-SPECIAL_CHARS = ["*", "'", '"', "?", "!", "^", "`", "$", "/", "\\", "#", "&", "@", "|"]
+SPECIAL_CHARS = {"*", "'", '"', "?", "!", "^", "`", "$", "/", "\\", "#", "&", "@", "|"}
 MAJOR_SEPARATOR = "=" * 80
 MINOR_SEPARATOR = "/" + "-"*78 + "/"
 
@@ -39,6 +45,12 @@ def main():
 
 
 def contains_special_chars(s: str) -> bool:
+    """
+    Checks if a string contains any special characters as defined by the SPECIAL_CHARS set.
+
+    :param s: String to check for special characters
+    :return: True if the string contains special characters, false if not
+    """
     for char in SPECIAL_CHARS:
         if char in s:
             return True
@@ -47,6 +59,14 @@ def contains_special_chars(s: str) -> bool:
 
 
 def validate_name_input(prompt: str, allow_empty: bool = False) -> str:
+    """
+    Takes inputs using the given prompt until a valid name is given. Valid names contain no special characters as
+    defined by the SPECIAL_CHARS set. If allow_empty is true then empty names are considered valid.
+
+    :param prompt: Prompt to print for each input
+    :param allow_empty: True if empty names are allowed, false if not
+    :return: A valid name once one is given
+    """
     val = input(prompt)
     while (not allow_empty and len(val) == 0) or contains_special_chars(val):
         print(f"\"{val}\" is not a valid name. Avoid special characters.")
@@ -56,6 +76,14 @@ def validate_name_input(prompt: str, allow_empty: bool = False) -> str:
 
 
 def validate_number_input(prompt: str, allow_empty: bool = False) -> str:
+    """
+    Takes inputs using the given prompt until a valid number is given. Valid numbers contain only numeric characters
+    and are greater than or equal to 0. If allow_empty is true then empty inputs are considered valid.
+
+    :param prompt: Prompt to print for each input
+    :param allow_empty: True if empty names are allowed, false if not
+    :return: A valid number once one is given
+    """
     val = input(prompt)
 
     if allow_empty and val == "":
@@ -69,6 +97,17 @@ def validate_number_input(prompt: str, allow_empty: bool = False) -> str:
 
 
 def collect_sources_info(config, num_sources: int) -> set[str]:
+    """
+    Collects information about the different sources to add to the config file. This includes the name of each source,
+    path to csv file, headers from csv to use, new names for those headers to use in output, headers from csv to match
+    data by, new names for those headers to use in output, the row which contains the headers, the rows to ignore, and
+    any regex filters to flag data from the source by. When collecting the path to csv, inputs will be taken until a
+    path to an existing file is given.
+
+    :param config: Configparser object
+    :param num_sources: Number of sources to collect info on
+    :return: A set of headers which will appear in the output
+    """
     config["sources"] = {}
     valid_headers = set()
 
@@ -117,6 +156,12 @@ def collect_sources_info(config, num_sources: int) -> set[str]:
 
 
 def collect_ignored_rows() -> str:
+    """
+    Collects row numbers to ignore until an empty input is given. Row numbers are then put into a string as a comma
+    separated list.
+
+    :return: String of comma separated list of row numbers to ignore
+    """
     ignored_rows = set()
 
     print("Row numbers will be collected until an empty input is given.")
@@ -131,6 +176,13 @@ def collect_ignored_rows() -> str:
 
 
 def collect_field_rules(config, valid_headers: set[str]) -> None:
+    """
+    Collects field rules and adds them to the configparser object.
+
+    :param config: Configparser object
+    :param valid_headers: Set of headers which will appear in the output (of the CSVTransfer not this script)
+    :return:
+    """
     print("Field rules are regex filters that allow you to control what gets included in the output. Write the regex "
           "so proper data matches.")
 
@@ -139,7 +191,14 @@ def collect_field_rules(config, valid_headers: set[str]) -> None:
     config["field_rules"] = rules
 
 
-def collect_rules(valid_headers: set[str]) -> dict:
+def collect_rules(valid_headers: set[str]) -> dict[str, str]:
+    """
+    Collects rules (header-regex pairs) until an empty header is given. Checks if each header is valid (will appear in
+    the output of CSVTransfer).
+
+    :param valid_headers: Set of headers which will appear in the output (of CSVTransfer not this script)
+    :return: Mapping of headers (keys) to regex (values)
+    """
     rules = {}
 
     print("Rules will be collected until an empty header is given\n")
@@ -161,6 +220,12 @@ def collect_rules(valid_headers: set[str]) -> dict:
 
 
 def validate_header_for_rule(valid_headers: set[str]) -> str:
+    """
+    Collects headers to use for rules until a valid header is given. Valid headers are defined by the valid_headers set.
+
+    :param valid_headers: Set of headers which will appear in the output (of CSVTransfer not this script)
+    :return: A valid header once one is given
+    """
     header = input("Header (that will appear in output) to apply rule to: ")
     while header not in valid_headers and header != "":
         print(f"\"{header}\" not found in headers that will appear in the output.")
@@ -169,19 +234,37 @@ def validate_header_for_rule(valid_headers: set[str]) -> str:
     return header
 
 
-def collect_target_cols():
+def collect_target_cols() -> dict[str, str]:
+    """
+    Collects target columns and column names.
+
+    :return: Mapping of target columns (keys) and column names (values)
+    """
     col_name_map = collect_headers_and_names(header="Target column", h_name="Column name")
 
     return col_name_map
 
 
-def collect_match_by():
+def collect_match_by() -> dict[str, str]:
+    """
+    Collects headers to match by and names for them to assume in the output (of CSVTransfer, not this script).
+
+    :return: Mapping of headers to match by (keys) and new names for them to assume (values)
+    """
     match_by_name_map = collect_headers_and_names(header="Match by", h_name="Match by name")
 
     return match_by_name_map
 
 
-def collect_headers_and_names(header: str, h_name: str) -> dict[str: str]:
+def collect_headers_and_names(header: str, h_name: str) -> dict[str, str]:
+    """
+    Collects headers and new names for them to be used in output csv. The original header name will be used if no new
+    name is given.
+
+    :param header: Name to call header being collected (from csv)
+    :param h_name: Name to call header to put in output csv
+    :return: Mapping of header (keys) to their new names (values)
+    """
     print(f"Header names will be collected until an empty name is given for {header.lower()}. If {h_name.lower()} is "
           f"left empty then the {header.lower()} (prev input) will be used.\n")
     header_name_map = {}
@@ -211,11 +294,19 @@ def collect_headers_and_names(header: str, h_name: str) -> dict[str: str]:
 
 
 def collect_output_info(config) -> None:
+    """
+    Collects output csv name, unmatched data file name, and output dialect. The unmatched data file name is allowed to
+    be empty.
+
+    :param config: Configparser object
+    :return:
+    """
     config["output"] = {}
 
     output_file_name = validate_name_input(prompt="Output file name: ")
     print(MINOR_SEPARATOR)
-    unmatched_file_name = validate_name_input(prompt="Name of file to send unmatched data to: ", allow_empty=True)
+    unmatched_file_name = validate_name_input(prompt="Name of file to send unmatched data to (none if empty): ",
+                                              allow_empty=True)
     print(MINOR_SEPARATOR)
     dialect = input("Output dialect (unix/excel_tab/[excel]): ").lower()
     if len(dialect) == 0:
