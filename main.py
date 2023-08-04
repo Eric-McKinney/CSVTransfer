@@ -27,7 +27,7 @@ from typing import Iterable
 # Custom type aliases for clarity
 Header = str
 Data = str
-Row = dict[Header: Data]
+Row = dict[Header, Data]
 
 CONFIG_FILE_NAME: str = "config_template.ini"
 DEBUG: bool = False  # either change this here or use --debug from command line
@@ -294,7 +294,7 @@ def get_config_constants() -> configparser.ConfigParser:
     return config
 
 
-def map_columns_names(config: configparser.ConfigParser) -> dict[str: dict[Header: Header]]:
+def map_columns_names(config: configparser.ConfigParser) -> dict[str, dict[Header, Header]]:
     """
     Parses the comma separated lists of target_columns, match_by, column_names, and match_by_names from the config
     file into a dictionary where headers from both target_columns and match_by are mapped to new names given by
@@ -306,7 +306,7 @@ def map_columns_names(config: configparser.ConfigParser) -> dict[str: dict[Heade
     :return: Dictionary with keys for each source containing a dictionary of headers and their corresponding name for
              the output file
     """
-    cols_names_mapping: dict[str: dict[Header: Header]] = {}
+    cols_names_mapping: dict[str, dict[Header, Header]] = {}
 
     for source in config["sources"]:
         target_cols: list[str] = config[source]["target_columns"].split(",")
@@ -394,9 +394,9 @@ def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
     return rows
 
 
-def transfer_data(source_name: str, source: list[Row], output: list[Row], names_map: dict[Header: Header],
+def transfer_data(source_name: str, source: list[Row], output: list[Row], names_map: dict[Header, Header],
                   match_by: list[Header], unmatched_output: str = None, dialect: str = "excel",
-                  regex: dict[Header: str] = None, strict: bool = False) -> None:
+                  regex: dict[Header, str] = None, strict: bool = False) -> None:
     """
     Moves data from columns in the source whose headers appear in names_map to the output under the corresponding header
     name that appear in the names_map. A match of the data transferred this way is attempted. The data is matched
@@ -423,10 +423,10 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
     """
 
     first_source: bool = output == []
-    buffer: list[dict] = []  # Buffering instead of appending to output directly to avoid matching data from same source
-    unmatched_data: list[dict] = []
+    buffer: list[Row] = []  # Buffering instead of appending to output directly to avoid matching data from same source
+    unmatched_data: list[Row] = []
     for row in source:
-        data_to_transfer: dict[Header: str] = {}  # will contain only the data we want to transfer from the row
+        data_to_transfer: Row = {}  # will contain only the data we want to transfer from the row
         found_match: bool = False
 
         # Extract data
@@ -484,8 +484,8 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
             write_csv(unmatched_output, headers, unmatched_data, dialect, append=append)
 
 
-def rows_match(row: dict[Header: Data], out_row: dict[Header: Data], match_by: list[Header],
-               names_map: dict[Header: Header]) -> bool:
+def rows_match(row: Row, out_row: Row, match_by: list[Header],
+               names_map: dict[Header, Header]) -> bool:
     """
     Determines whether two rows match one another. Two rows are considered matching if the data under one or more
     specified headers is identical. For the row parameter this means the headers in the match_by list. For the out_row
@@ -508,7 +508,7 @@ def rows_match(row: dict[Header: Data], out_row: dict[Header: Data], match_by: l
     return matches
 
 
-def data_matches_regex(data: dict[Header: str], regex: dict[Header: str]) -> bool:
+def data_matches_regex(data: Row, regex: dict[Header, str]) -> bool:
     """
     Checks if given row's data that is being transferred matches the given regex for specific fields/headers. If a regex
     appears that refers to data not being transferred, it will be ignored.
@@ -524,7 +524,7 @@ def data_matches_regex(data: dict[Header: str], regex: dict[Header: str]) -> boo
     return True
 
 
-def parse_source_rules(config: configparser.ConfigParser) -> dict[str: dict[Header: str]]:
+def parse_source_rules(config: configparser.ConfigParser) -> dict[str, configparser.SectionProxy]:
     """
     Creates a dictionary of source names with rules as values. The rules are dictionaries of headers (from the output)
     and the regex to apply for that header.
@@ -542,7 +542,7 @@ def parse_source_rules(config: configparser.ConfigParser) -> dict[str: dict[Head
     return source_rules
 
 
-def enforce_source_rules(data: list[Row], rules: dict[str: dict[Header: str]]) -> None:
+def enforce_source_rules(data: list[Row], rules: dict[str, configparser.SectionProxy]) -> None:
     """
     Goes through the data checking if source rules are obeyed. All broken rules are documented in the "Source rules
     broken" column with the format "source_name:rule_broken" (quotes not included). If no source rules are broken then
@@ -572,7 +572,7 @@ def enforce_source_rules(data: list[Row], rules: dict[str: dict[Header: str]]) -
             row["Source rules broken"] = rules_broken
 
 
-def unify_headers(names_map: dict[str: dict[Header: Header]]) -> list[str]:
+def unify_headers(names_map: dict[str, dict[Header, Header]]) -> list[str]:
     """
     Consolidates the headers from across sources into one list without duplicates.
 
