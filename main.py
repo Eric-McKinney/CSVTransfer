@@ -28,6 +28,7 @@ from typing import Iterable
 Header = str
 Data = str
 Row = dict[Header, Data]
+Config = configparser.ConfigParser
 
 CONFIG_FILE_NAME: str = "config_template.ini"
 DEBUG: bool = False  # either change this here or use --debug from command line
@@ -83,7 +84,7 @@ def main(args: list[str] = None):
 
     strict: bool = "--strict" in args
 
-    config: configparser.ConfigParser = get_config_constants()
+    config: Config = get_config_constants()
 
     merged_data: list[Row] = []
     cols_name_mapping: dict = map_columns_names(config)
@@ -146,7 +147,7 @@ def valid_file_names(file_names: Iterable[str]) -> bool:
     return True
 
 
-def validate_config(config: configparser.ConfigParser) -> None:
+def validate_config(config: Config) -> None:
     """
     Checks the parsed config file for improper inputs, missing information, and other improper usage. While checking for
     these errors, error messages are accumulated and returned after the config file has been fully checked. If there
@@ -234,7 +235,7 @@ def validate_config(config: configparser.ConfigParser) -> None:
         raise SystemExit(err_msg.rstrip())
 
 
-def validate_rules(config: configparser.ConfigParser, output_headers: list[Header]) -> None:
+def validate_rules(config: Config, output_headers: list[Header]) -> None:
     """
     Validates the field and source rules from the config file. All field and source rules should apply to a header that
     appears in the output otherwise an appropriate error message will be generated. The program will exit after
@@ -264,7 +265,7 @@ def validate_rules(config: configparser.ConfigParser, output_headers: list[Heade
         raise SystemExit(err_msg.rstrip())
 
 
-def get_config_constants() -> configparser.ConfigParser:
+def get_config_constants() -> Config:
     """
     Assigns config constants from the file CONFIG_FILE_NAME. Both the constants and the config file are described in the
     README. Exits and prints error message if there are issues with the config file.
@@ -294,7 +295,7 @@ def get_config_constants() -> configparser.ConfigParser:
     return config
 
 
-def map_columns_names(config: configparser.ConfigParser) -> dict[str, dict[Header, Header]]:
+def map_columns_names(config: Config) -> dict[str, dict[Header, Header]]:
     """
     Parses the comma separated lists of target_columns, match_by, column_names, and match_by_names from the config
     file into a dictionary where headers from both target_columns and match_by are mapped to new names given by
@@ -519,7 +520,7 @@ def data_matches_regex(data: Row, regex: dict[Header, str]) -> bool:
     return True
 
 
-def parse_source_rules(config: configparser.ConfigParser) -> dict[str, configparser.SectionProxy]:
+def parse_source_rules(config: Config) -> dict[str, configparser.SectionProxy]:
     """
     Creates a dictionary of source names with rules as values. The rules are dictionaries of headers (from the output)
     and the regex to apply for that header.
