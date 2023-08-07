@@ -1,9 +1,12 @@
 import configparser
 import unittest
 import main
-
+from pathlib import Path
 
 class MyTestCase(unittest.TestCase):
+    def setUp(self):
+        Path("test_outputs/").mkdir(parents=True, exist_ok=True)
+    
     def test_valid_file_names(self):
         names1: list[str] = ["example_files/example.csv", "example_files/example2.csv"]
         names2: list[str] = ["example_files/example2.csv", "example_files/example3.csv"]
