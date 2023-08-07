@@ -59,6 +59,39 @@ POTENTIAL ISSUES
 """
 
 
+class Source:
+    name: str
+    data: list[Row]
+    headers: list[Header]
+    rules: configparser.SectionProxy
+
+    def __init__(self, config: Config, source_name: str):
+        pass
+
+
+class Config2:  # temp name which will take place of the Config type alias eventually
+    config: configparser.ConfigParser
+    cols_name_mapping: dict[str, dict[Header, Header]]
+    all_headers: list[Header]
+    # etc idk...
+
+    def __init__(self):
+        pass
+
+    def validate(self):
+        pass
+
+
+class CSVTransfer:
+    debug: bool
+    strict: bool
+    config: Config2
+    output: Source
+
+    def __init__(self, config, strict=False, debug=False):
+        pass
+
+
 def main(args: list[str] = None):
     """
     Runs this script by first parsing args which can be given as a list of strings or via command line, loads info from
@@ -568,7 +601,7 @@ def enforce_source_rules(data: list[Row], rules: dict[str, configparser.SectionP
             row["Source rules broken"] = rules_broken
 
 
-def unify_headers(names_map: dict[str, dict[Header, Header]]) -> list[str]:
+def unify_headers(names_map: dict[str, dict[Header, Header]]) -> list[Header]:
     """
     Consolidates the headers from across sources into one list without duplicates.
 
