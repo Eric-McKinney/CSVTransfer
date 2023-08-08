@@ -3,6 +3,7 @@ import unittest
 import main
 from pathlib import Path
 
+
 class MyTestCase(unittest.TestCase):
     def setUp(self):
         Path("test_outputs/").mkdir(parents=True, exist_ok=True)
