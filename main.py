@@ -19,17 +19,14 @@ your environment.
 """
 import configparser
 import csv
-import os
 import re
 import sys
-from typing import Iterable
-from config_handler import Config2
+from config_handler import Config
 
 # Custom type aliases for clarity
 Header = str
 Data = str
 Row = dict[Header, Data]
-Config = configparser.ConfigParser
 
 CONFIG_FILE_NAME: str = "config_template.ini"
 DEBUG: bool = False  # either change this here or use --debug from command line
@@ -73,7 +70,7 @@ class Source:
 class CSVTransfer:
     debug: bool
     strict: bool
-    config: Config2
+    config: Config
     output: Source
 
     def __init__(self, config, strict=False, debug=False):
@@ -105,7 +102,7 @@ def main(args: list[str] = None):
 
     strict: bool = "--strict" in args
 
-    config: Config = get_config_constants()
+    config: Config = Config(CONFIG_FILE_NAME)
 
     merged_data: list[Row] = []
     cols_name_mapping: dict = map_columns_names(config)
