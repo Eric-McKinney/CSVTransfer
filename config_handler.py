@@ -2,16 +2,25 @@ import configparser
 import sys
 import config_gen
 from pathlib import Path
+from typing import Any, Iterable
 from main import Header
 
 
-class Config2:  # temp name which will take place of the Config type alias eventually
+class Config:
     config: configparser.ConfigParser
     cols_name_mapping: dict[str, dict[Header, Header]]
     all_headers: list[Header]
     # etc idk...
 
-    def __init__(self, config_file_name: str):
+    def __init__(self, config_file_name: str) -> None:
+        """
+        Reads the config file by the given name, checks for errors and bad inputs, and fills in values from defaults for
+        each source section. If any errors or bad inputs are found then an appropriate error message will be printed
+        before exiting. If there is no file by the given name, one can be generated before exiting.
+
+        :param config_file_name: Name or path of config file
+        """
+
         if not Path(config_file_name).is_file():
             print(f"\"{config_file_name}\" not found. You may need to change CONFIG_FILE_NAME in {sys.argv[0]}")
             gen_cfg: bool = input("Would you like to generate a config file (y/N)? ").lower() in ["y", "yes"]
@@ -25,25 +34,128 @@ class Config2:  # temp name which will take place of the Config type alias event
         self.config = configparser.ConfigParser(allow_no_value=True)
         self.config.optionxform = str
         self.config.read(config_file_name)
+        self.__validate()
+        self.__set_defaults()
 
-    def validate(self):
+    def __set_defaults(self) -> None:
+        """
+        Sets all values of keys in sources that appear in defaults to defaults if not set
+        (configparser does this but for all sections, and I don't want that)
+        """
+
+        for source in self.config["sources"]:
+            for key in self.config["defaults"]:
+                if self.config[source][key] in [None, ""] and self.config["defaults"][key] not in [None, ""]:
+                    self.config[source][key] = self.config["defaults"][key]
+
+    def __validate(self) -> None:
+        """
+        Checks the parsed config file for improper inputs, missing information, and other improper usage. While checking
+        for these errors, error messages are accumulated and returned after the config file has been fully checked. If
+        there were errors detected then the program will print the error messages and exit.
+        """
+        err_msg = ""
+        base_sections_exist = True
+
+        # Identify missing vital sections
+        for section in ["defaults", "sources", "output"]:
+            if section not in self.config:
+                base_sections_exist = False
+                err_msg += f"{section} not found in config file\n"
+
+        if base_sections_exist and not valid_file_names(self.config["sources"].values()):
+            err_msg += "Invalid source file name(s). Ensure the paths are correct in the config file\n"
+
+        # Identify missing source sections
+        missing_sources = []
+        for source in self.config["sources"]:
+            if source not in self.config:
+                err_msg += f"Source section \"{source}\" not found\n"
+                missing_sources.append(source)
+            elif base_sections_exist:
+                for key in self.config["defaults"]:
+                    if key not in self.config[source]:
+                        err_msg += f"Key \"{key}\" from defaults not found in {source}. It can be empty, but it needs to " \
+                                   f"be there\n"
+
+        if base_sections_exist and len(self.config["sources"]) == 0:
+            err_msg += "No source sections found\n"
+
+        # Identify missing variables
+        if base_sections_exist:
+            for source in self.config["sources"]:
+                # Identify missing variables in each source section if the section exists
+                if source in missing_sources:
+                    continue
+
+                for key in ["target_columns", "header_row_num"]:
+                    not_in_source = key not in self.config[source]
+                    not_in_defaults = key not in self.config["defaults"]
+
+                    if not_in_source:
+                        err_msg += f"Key {key} not found in {source}\n"
+                        continue
+
+                    no_value_in_source = True if not_in_source else self.config[source][key] in [None, ""]
+                    no_value_in_defaults = True if not_in_defaults else self.config["defaults"][key] in [None, ""]
+
+                    if no_value_in_source and (not_in_defaults or no_value_in_defaults):
+                        err_msg += f"No value for {key} in {source} or in defaults\n"
+
+                # Check for empty source rules
+                source_rules = f"{source}_rules"
+                if source_rules in self.config:
+                    for header in self.config[source_rules]:
+                        rule = self.config[source_rules]
+
+                        if rule in [None, ""]:
+                            err_msg += f"Empty rule \"{header}\" in {source_rules}\n"
+
+            # Identify missing variables in output section
+            for key in ["file_name", "dialect"]:
+                if key not in self.config["output"]:
+                    err_msg += f"Output {key} missing\n"
+                elif self.config["output"][key] in [None, ""]:
+                    err_msg += f"No value for output {key}\n"
+
+            if ("dialect" in self.config["output"]
+                    and self.config["output"]["dialect"] not in ["excel", "excel_tab", "unix"]):
+                err_msg += f'Invalid output dialect \"{self.config["output"]["dialect"]}\"\n'
+
+        # Check for empty field rules
+        if "field_rules" in self.config:
+            for header in self.config["field_rules"]:
+                rule = self.config["field_rules"][header]
+
+                if rule in [None, ""]:
+                    err_msg += f"Empty rule for {header} in field_rules\n"
+
+        if err_msg != "":
+            raise SystemExit(err_msg.rstrip())
+
+    def __check_empty_rules(self):
         pass
+
+    def __validate_rules(self):
+        pass
+
+    def __getitem__(self, item: Any) -> configparser.SectionProxy:
+        return self.config[item]
 
 
 def valid_file_names(file_names: Iterable[str]) -> bool:
     """
-    Determines if file names in config file are valid. File names should be relative paths of files that are within the
-    current working directory or a subdirectory. (e.g. file_name, ./file_name, ./subdir/file_name, subdir/file_name).
+    Determines if file names in config file are valid. File names should be paths (absolute or relative) of files that
+    exist. (e.g. file_name, ./file_name, ./subdir/file_name, subdir/file_name).
 
     :param file_names: List of file names from config file
     :return: True if all are valid, false if any are not valid
     """
 
     for file in file_names:
-        # If files (or relative paths) aren't in the current directory then they are not valid
-        path: str = os.path.join(os.getcwd(), file)
-        path_exists: bool = os.path.exists(path)
-        is_file: bool = os.path.isfile(path)
+        path: Path = Path(file)
+        path_exists: bool = path.exists()
+        is_file: bool = path.is_file()
         if not path_exists or not is_file:
             print(f"\nInvalid file name: '{file}'", file=sys.stderr)
             print("" if path_exists else f"{path} does not exist\n", file=sys.stderr, end="")
@@ -51,94 +163,6 @@ def valid_file_names(file_names: Iterable[str]) -> bool:
             return False
 
     return True
-
-
-def validate_config(config: Config) -> None:
-    """
-    Checks the parsed config file for improper inputs, missing information, and other improper usage. While checking for
-    these errors, error messages are accumulated and returned after the config file has been fully checked. If there
-    were errors detected then the program will print the error messages and exit.
-
-    :param config: Parsed config file
-    :return:
-    """
-    err_msg = ""
-    base_sections_exist = True
-
-    # Identify missing vital sections
-    for section in ["defaults", "sources", "output"]:
-        if section not in config:
-            base_sections_exist = False
-            err_msg += f"{section} not found in config file\n"
-
-    if base_sections_exist and not valid_file_names(config["sources"].values()):
-        err_msg += "Invalid source file name(s). Ensure the paths are correct in the config file\n"
-
-    # Identify missing source sections
-    missing_sources = []
-    for source in config["sources"]:
-        if source not in config:
-            err_msg += f"Source section \"{source}\" not found\n"
-            missing_sources.append(source)
-        elif base_sections_exist:
-            for key in config["defaults"]:
-                if key not in config[source]:
-                    err_msg += f"Key \"{key}\" from defaults not found in {source}. It can be empty, but it needs to " \
-                               f"be there\n"
-
-    if base_sections_exist and len(config["sources"]) == 0:
-        err_msg += "No source sections found\n"
-
-    # Identify missing variables
-    if base_sections_exist:
-        for source in config["sources"]:
-            # Identify missing variables in each source section if the section exists
-            if source in missing_sources:
-                continue
-
-            for key in ["target_columns", "header_row_num"]:
-                not_in_source = key not in config[source]
-                not_in_defaults = key not in config["defaults"]
-
-                if not_in_source:
-                    err_msg += f"Key {key} not found in {source}\n"
-                    continue
-
-                no_value_in_source = True if not_in_source else config[source][key] in [None, ""]
-                no_value_in_defaults = True if not_in_defaults else config["defaults"][key] in [None, ""]
-
-                if no_value_in_source and (not_in_defaults or no_value_in_defaults):
-                    err_msg += f"No value for {key} in {source} or in defaults\n"
-
-            # Check for empty source rules
-            source_rules = f"{source}_rules"
-            if source_rules in config:
-                for header in config[source_rules]:
-                    rule = config[source_rules]
-
-                    if rule in [None, ""]:
-                        err_msg += f"Empty rule \"{header}\" in {source_rules}\n"
-
-        # Identify missing variables in output section
-        for key in ["file_name", "dialect"]:
-            if key not in config["output"]:
-                err_msg += f"Output {key} missing\n"
-            elif config["output"][key] in [None, ""]:
-                err_msg += f"No value for output {key}\n"
-
-        if "dialect" in config["output"] and config["output"]["dialect"] not in ["excel", "excel_tab", "unix"]:
-            err_msg += f'Invalid output dialect \"{config["output"]["dialect"]}\"\n'
-
-    # Check for empty field rules
-    if "field_rules" in config:
-        for header in config["field_rules"]:
-            rule = config["field_rules"][header]
-
-            if rule in [None, ""]:
-                err_msg += f"Empty rule for {header} in field_rules\n"
-
-    if err_msg != "":
-        raise SystemExit(err_msg.rstrip())
 
 
 def validate_rules(config: Config, output_headers: list[Header]) -> None:
@@ -169,36 +193,6 @@ def validate_rules(config: Config, output_headers: list[Header]) -> None:
 
     if err_msg != "":
         raise SystemExit(err_msg.rstrip())
-
-
-def get_config_constants() -> Config:
-    """
-    Assigns config constants from the file CONFIG_FILE_NAME. Both the constants and the config file are described in the
-    README. Exits and prints error message if there are issues with the config file.
-
-    :raises SystemExit: If necessary fields are missing from config file.
-    :return: ConfigParser object which acts as a map of the config file where the keys are the sections in the config
-    file and the values are dictionaries of that section's variables where the keys are the variable name and the value
-    is the value of that variable (as a string).
-    """
-    if not os.path.exists(os.path.join(os.getcwd(), CONFIG_FILE_NAME)):
-        raise SystemExit(f"Could not find config file \"{CONFIG_FILE_NAME}\" in the current directory.\n"
-                         f"Either create a config file by that name or change the CONFIG_FILE_NAME variable in this "
-                         f"script.")
-
-    config = configparser.ConfigParser(allow_no_value=True)
-    config.optionxform = str
-    config.read(CONFIG_FILE_NAME)
-    validate_config(config)
-
-    # Set all values of keys in sources appear in defaults to defaults if not set
-    # (configparser does this but for all sections, and I don't want that)
-    for source in config["sources"]:
-        for key in config["defaults"]:
-            if config[source][key] in [None, ""] and config["defaults"][key] not in [None, ""]:
-                config[source][key] = config["defaults"][key]
-
-    return config
 
 
 def map_columns_names(config: Config) -> dict[str, dict[Header, Header]]:
