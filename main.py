@@ -22,6 +22,7 @@ import csv
 import re
 import sys
 from config_handler import Config
+from source_handler import Source
 
 # Custom type aliases for clarity
 Header = str
@@ -57,23 +58,13 @@ POTENTIAL ISSUES
 """
 
 
-class Source:
-    name: str
-    data: list[Row]
-    headers: list[Header]
-    rules: configparser.SectionProxy
-
-    def __init__(self, config: Config, source_name: str):
-        pass
-
-
 class CSVTransfer:
     debug: bool
     strict: bool
     config: Config
     output: Source
 
-    def __init__(self, config, strict=False, debug=False):
+    def __init__(self, config: Config, strict=False, debug=False):
         pass
 
 
@@ -140,45 +131,6 @@ def main(args: list[str] = None):
         print(f"Unmatched data can be found in {config['output']['unmatched_file_name']}")
 
     print("="*80)
-
-
-def parse_csv(file_name: str, header_line_num: int, ignored_rows: list[int]):
-    """
-    Parses a csv file into a list of its rows. Each row is put into a dictionary where the keys are the headers for a
-    column and the values are the elements of that row. Rows listed in ignored_rows are not parsed. The header row is
-    not an element of the list, but is represented in every element of the list by the key values.
-
-    :param file_name: name of file to parse
-    :param header_line_num: line number of the headers (starts at 0)
-    :param ignored_rows: List of row numbers to ignore
-    :return: List of the rows of the csv
-    """
-    try:
-        with open(file_name, newline='', errors="ignore") as csvfile:
-            dialect = csv.Sniffer().sniff(csvfile.readline())
-            csvfile.seek(0)
-
-            header_reader = csv.reader(csvfile, dialect=dialect)
-            for _ in range(header_line_num):
-                header_reader.__next__()
-
-            headers: list[str] = header_reader.__next__()
-            csvfile.seek(0)
-
-            reader = csv.DictReader(csvfile, fieldnames=headers, dialect=dialect)
-
-            rows: list[Row] = []
-            for i, row in enumerate(reader):
-                if DEBUG:
-                    print(f"Line #{i}: {row}")
-                if i in ignored_rows or i == header_line_num:
-                    continue
-
-                rows.append(row)
-    except FileNotFoundError:
-        raise SystemExit(f"Could not find {file_name}")
-
-    return rows
 
 
 def transfer_data(source_name: str, source: list[Row], output: list[Row], names_map: dict[Header, Header],
