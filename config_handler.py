@@ -45,7 +45,10 @@ class Config:
 
         for source in self.config["sources"]:
             for key in self.config["defaults"]:
-                if self.config[source][key] in [None, ""] and self.config["defaults"][key] not in [None, ""]:
+                source_missing_val: bool = key not in self.config[source] or self.config[source][key] in [None, ""]
+                default_val_exists: bool = self.config["defaults"][key] not in [None, ""]
+
+                if source_missing_val and default_val_exists:
                     self.config[source][key] = self.config["defaults"][key]
 
     def __validate(self) -> None:
@@ -54,6 +57,14 @@ class Config:
         for these errors, error messages are accumulated and returned after the config file has been fully checked. If
         there were errors detected then the program will print the error messages and exit.
         """
+        err_msg = self.__check_missing_sections()
+        err_msg += self.__check_missing_variables()
+        err_msg += self.__validate_rules()
+
+        if err_msg != "":
+            raise SystemExit(err_msg.rstrip())
+
+    def __check_missing_sections(self) -> str:
         err_msg = ""
         base_sections_exist = True
 
@@ -72,16 +83,16 @@ class Config:
             if source not in self.config:
                 err_msg += f"Source section \"{source}\" not found\n"
                 missing_sources.append(source)
-            elif base_sections_exist:
-                for key in self.config["defaults"]:
-                    if key not in self.config[source]:
-                        err_msg += f"Key \"{key}\" from defaults not found in {source}. It can be empty, but it needs to " \
-                                   f"be there\n"
 
         if base_sections_exist and len(self.config["sources"]) == 0:
             err_msg += "No source sections found\n"
 
+        return err_msg
+
+    def __check_missing_variables(self):
         # Identify missing variables
+        err_msg = ""
+
         if base_sections_exist:
             for source in self.config["sources"]:
                 # Identify missing variables in each source section if the section exists
@@ -130,14 +141,34 @@ class Config:
                 if rule in [None, ""]:
                     err_msg += f"Empty rule for {header} in field_rules\n"
 
-        if err_msg != "":
-            raise SystemExit(err_msg.rstrip())
+        return err_msg
 
-    def __check_empty_rules(self):
-        pass
+    def __validate_rules(self, output_headers: list[Header]) -> str:
+        """
+        Validates the field and source rules from the config file. All field and source rules should apply to a header that
+        appears in the output otherwise an appropriate error message will be generated. The program will exit after
+        accumulating all applicable error messages and printing them out.
 
-    def __validate_rules(self):
-        pass
+        :param output_headers: List of headers that will appear in the output
+        :return:
+        """
+
+        err_msg = ""
+
+        if "field_rules" in self.config:
+            for rule in self.config["field_rules"]:
+                if rule not in output_headers:
+                    err_msg += f"field_rule error: Could not find the header \"{rule}\" in output headers\n"
+
+        for source in self.config["sources"]:
+            rules_section = f"{source}_rules"
+
+            if rules_section in self.config:
+                for rule in self.config[rules_section]:
+                    if rule not in output_headers:
+                        err_msg += f"{rules_section} error: Could not find the header \"{rule}\" in output headers\n"
+        
+        return err_msg
 
     def __getitem__(self, item: Any) -> configparser.SectionProxy:
         return self.config[item]
@@ -158,41 +189,11 @@ def valid_file_names(file_names: Iterable[str]) -> bool:
         is_file: bool = path.is_file()
         if not path_exists or not is_file:
             print(f"\nInvalid file name: '{file}'", file=sys.stderr)
-            print("" if path_exists else f"{path} does not exist\n", file=sys.stderr, end="")
+            print("" if path_exists else f"{path.absolute()} does not exist\n", file=sys.stderr, end="")
             print("" if is_file else f"{file} is not a file", file=sys.stderr)
             return False
 
     return True
-
-
-def validate_rules(config: Config, output_headers: list[Header]) -> None:
-    """
-    Validates the field and source rules from the config file. All field and source rules should apply to a header that
-    appears in the output otherwise an appropriate error message will be generated. The program will exit after
-    accumulating all applicable error messages and printing them out.
-
-    :param config: Parsed config file
-    :param output_headers: List of headers that will appear in the output
-    :return:
-    """
-
-    err_msg = ""
-
-    if "field_rules" in config:
-        for rule in config["field_rules"]:
-            if rule not in output_headers:
-                err_msg += f"field_rule error: Could not find the header \"{rule}\" in output headers\n"
-
-    for source in config["sources"]:
-        rules_section = f"{source}_rules"
-
-        if rules_section in config:
-            for rule in config[rules_section]:
-                if rule not in output_headers:
-                    err_msg += f"{rules_section} error: Could not find the header \"{rule}\" in output headers\n"
-
-    if err_msg != "":
-        raise SystemExit(err_msg.rstrip())
 
 
 def map_columns_names(config: Config) -> dict[str, dict[Header, Header]]:
