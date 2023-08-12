@@ -9,8 +9,7 @@ from main import Header
 class Config:
     config: configparser.ConfigParser
     cols_name_mapping: dict[str, dict[Header, Header]]
-    all_headers: list[Header]
-    # etc idk...
+    output_headers: list[Header]
 
     def __init__(self, config_file_name: str) -> None:
         """
@@ -34,8 +33,14 @@ class Config:
         self.config = configparser.ConfigParser(allow_no_value=True)
         self.config.optionxform = str
         self.config.read(config_file_name)
+
         self.__validate()
         self.__set_defaults()
+
+        self.cols_name_mapping = self.__map_columns_names()
+        self.output_headers = self.__unify_headers()
+
+        self.__validate_rules()
 
     def __set_defaults(self) -> None:
         """
@@ -59,7 +64,6 @@ class Config:
         """
         err_msg = self.__check_missing_sections()
         err_msg += self.__check_missing_variables()
-        err_msg += self.__validate_rules()
 
         if err_msg != "":
             raise SystemExit(err_msg.rstrip())
@@ -78,11 +82,9 @@ class Config:
             err_msg += "Invalid source file name(s). Ensure the paths are correct in the config file\n"
 
         # Identify missing source sections
-        missing_sources = []
         for source in self.config["sources"]:
             if source not in self.config:
                 err_msg += f"Source section \"{source}\" not found\n"
-                missing_sources.append(source)
 
         if base_sections_exist and len(self.config["sources"]) == 0:
             err_msg += "No source sections found\n"
@@ -96,7 +98,7 @@ class Config:
         if base_sections_exist:
             for source in self.config["sources"]:
                 # Identify missing variables in each source section if the section exists
-                if source in missing_sources:
+                if source not in self.config:
                     continue
 
                 for key in ["target_columns", "header_row_num"]:
@@ -143,21 +145,57 @@ class Config:
 
         return err_msg
 
-    def __validate_rules(self, output_headers: list[Header]) -> str:
+    def __map_columns_names(self) -> dict[str, dict[Header, Header]]:
         """
-        Validates the field and source rules from the config file. All field and source rules should apply to a header that
-        appears in the output otherwise an appropriate error message will be generated. The program will exit after
+        Parses the comma separated lists of target_columns, match_by, column_names, and match_by_names from the config
+        file into a dictionary where headers from both target_columns and match_by are mapped to new names given by
+        column_names and match_by_names. This is done for each source. If there are a different number of headers than
+        names, then names are used up until they run out or there are no more headers. Once names run out, headers will
+        be mapped to themselves as new names. The headers from match by are put before the headers from target columns.
+
+        :return: Dictionary with keys for each source containing a dictionary of headers and their corresponding name
+                 for the output file
+        """
+        cols_names_mapping: dict[str, dict[Header, Header]] = {}
+
+        for source in self.config["sources"]:
+            target_cols: list[str] = self.config[source]["target_columns"].split(",")
+            col_names: list[str] = self.config[source]["column_names"].split(",")
+
+            match_by: list[str] = self.config[source]["match_by"].split(",")
+            match_by_names: list[str] = self.config[source]["match_by_names"].split(",")
+
+            # Remove empty strings (happens when config file field is left fully or partially empty)
+            for header_list in [target_cols, col_names, match_by, match_by_names]:
+                for _ in range(header_list.count("")):
+                    header_list.remove("")
+
+            cols_names_mapping[source] = {}
+            for i, col in enumerate(match_by):
+                if i < len(match_by_names):
+                    cols_names_mapping[source][col] = match_by_names[i]
+                else:
+                    cols_names_mapping[source][col] = col
+
+            for i, col in enumerate(target_cols):
+                if i < len(col_names):
+                    cols_names_mapping[source][col] = col_names[i]
+                else:
+                    cols_names_mapping[source][col] = col
+
+        return cols_names_mapping
+
+    def __validate_rules(self):
+        """
+        Validates the field and source rules from the config file. All field and source rules should apply to a header
+        that appears in the output otherwise an appropriate error message will be generated. The program will exit after
         accumulating all applicable error messages and printing them out.
-
-        :param output_headers: List of headers that will appear in the output
-        :return:
         """
-
         err_msg = ""
 
         if "field_rules" in self.config:
             for rule in self.config["field_rules"]:
-                if rule not in output_headers:
+                if rule not in self.output_headers:
                     err_msg += f"field_rule error: Could not find the header \"{rule}\" in output headers\n"
 
         for source in self.config["sources"]:
@@ -165,10 +203,26 @@ class Config:
 
             if rules_section in self.config:
                 for rule in self.config[rules_section]:
-                    if rule not in output_headers:
+                    if rule not in self.output_headers:
                         err_msg += f"{rules_section} error: Could not find the header \"{rule}\" in output headers\n"
         
-        return err_msg
+        if err_msg != "":
+            raise SystemExit(err_msg.rstrip())
+
+    def __unify_headers(self) -> list[str]:
+        """
+        Consolidates the headers from across sources into one list without duplicates.
+
+        :return: A list of headers to be used in the output
+        """
+        unified_headers: list[str] = ["Sources found in", "Source rules broken"]
+
+        for source in self.cols_name_mapping:
+            for header in self.cols_name_mapping[source].values():
+                if header not in unified_headers:
+                    unified_headers.append(header)
+
+        return unified_headers
 
     def __getitem__(self, item: Any) -> configparser.SectionProxy:
         return self.config[item]
@@ -194,94 +248,3 @@ def valid_file_names(file_names: Iterable[str]) -> bool:
             return False
 
     return True
-
-
-def map_columns_names(config: Config) -> dict[str, dict[Header, Header]]:
-    """
-    Parses the comma separated lists of target_columns, match_by, column_names, and match_by_names from the config
-    file into a dictionary where headers from both target_columns and match_by are mapped to new names given by
-    column_names and match_by_names. This is done for each source. If there are a different number of headers than
-    names, then names are used up until they run out or there are no more headers. Once names run out, headers will be
-    mapped to themselves as new names. The headers from match by are put before the headers from target columns.
-
-    :param config: Parsed config file
-    :return: Dictionary with keys for each source containing a dictionary of headers and their corresponding name for
-             the output file
-    """
-    cols_names_mapping: dict[str, dict[Header, Header]] = {}
-
-    for source in config["sources"]:
-        target_cols: list[str] = config[source]["target_columns"].split(",")
-        col_names: list[str] = config[source]["column_names"].split(",")
-
-        match_by: list[str] = config[source]["match_by"].split(",")
-        match_by_names: list[str] = config[source]["match_by_names"].split(",")
-
-        # Remove empty strings (happens when config file field is left fully or partially empty)
-        for header_list in [target_cols, col_names, match_by, match_by_names]:
-            for _ in range(header_list.count("")):
-                header_list.remove("")
-
-        cols_names_mapping[source] = {}
-        for i, col in enumerate(match_by):
-            if i < len(match_by_names):
-                cols_names_mapping[source][col] = match_by_names[i]
-            else:
-                cols_names_mapping[source][col] = col
-
-        for i, col in enumerate(target_cols):
-            if i < len(col_names):
-                cols_names_mapping[source][col] = col_names[i]
-            else:
-                cols_names_mapping[source][col] = col
-
-    return cols_names_mapping
-
-
-def parse_ignored_rows(ignored_rows_str: str) -> list[int]:
-    """
-    Converts string of comma separated list of row numbers to a list of integers.
-
-    :param ignored_rows_str: Comma separated list of row numbers
-    :return: List of row numbers
-    """
-    ignored_rows: list[int] = []
-    for row_num in ignored_rows_str.split(","):
-        ignored_rows.append(int(row_num))
-
-    return ignored_rows
-
-
-def parse_source_rules(config: Config) -> dict[str, configparser.SectionProxy]:
-    """
-    Creates a dictionary of source names with rules as values. The rules are dictionaries of headers (from the output)
-    and the regex to apply for that header.
-
-    :param config: Parsed config file
-    :return: Dictionary of each source name (keys) and their rules (values) which are dictionaries of headers and regexs
-    """
-    source_rules = {}
-
-    for source in config["sources"]:
-        if f"{source}_rules" in config:
-            rules = config[f"{source}_rules"]
-            source_rules[source] = rules
-
-    return source_rules
-
-
-def unify_headers(names_map: dict[str, dict[Header, Header]]) -> list[Header]:
-    """
-    Consolidates the headers from across sources into one list without duplicates.
-
-    :param names_map: Map of the headers from each source and their associated name in the output
-    :return: A list of headers to be used in the output
-    """
-    unified_headers: list[str] = ["Sources found in", "Source rules broken"]
-
-    for source in names_map:
-        for header in names_map[source].values():
-            if header not in unified_headers:
-                unified_headers.append(header)
-
-    return unified_headers
