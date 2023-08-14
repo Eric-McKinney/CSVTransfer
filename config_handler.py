@@ -92,57 +92,72 @@ class Config:
 
         return err_msg
 
-    def __check_missing_variables(self):
-        # Identify missing variables
+    def __check_missing_variables(self) -> str:
+        err_msg = self.__check_missing_variables_sources()
+        err_msg += self.__check_missing_variables_output()
+        err_msg += self.__check_empty_rules("field_rules")
+
+        return err_msg
+
+    def __check_missing_variables_sources(self) -> str:
         err_msg = ""
 
-        if base_sections_exist:
-            for source in self.config["sources"]:
-                # Identify missing variables in each source section if the section exists
-                if source not in self.config:
+        if "sources" not in self.config:
+            return err_msg
+
+        for source in self.config["sources"]:
+            # Identify missing variables in each source section if the section exists
+            if source not in self.config:
+                continue
+
+            for key in ["target_columns", "header_row_num"]:
+                not_in_source = key not in self.config[source]
+                not_in_defaults = key not in self.config["defaults"]
+
+                if not_in_source:
+                    err_msg += f"Key {key} not found in {source}\n"
                     continue
 
-                for key in ["target_columns", "header_row_num"]:
-                    not_in_source = key not in self.config[source]
-                    not_in_defaults = key not in self.config["defaults"]
+                no_value_in_source = True if not_in_source else self.config[source][key] in [None, ""]
+                no_value_in_defaults = True if not_in_defaults else self.config["defaults"][key] in [None, ""]
 
-                    if not_in_source:
-                        err_msg += f"Key {key} not found in {source}\n"
-                        continue
+                if no_value_in_source and (not_in_defaults or no_value_in_defaults):
+                    err_msg += f"No value for {key} in {source} or in defaults\n"
 
-                    no_value_in_source = True if not_in_source else self.config[source][key] in [None, ""]
-                    no_value_in_defaults = True if not_in_defaults else self.config["defaults"][key] in [None, ""]
+            source_rules = f"{source}_rules"
+            self.__check_empty_rules(source_rules)
 
-                    if no_value_in_source and (not_in_defaults or no_value_in_defaults):
-                        err_msg += f"No value for {key} in {source} or in defaults\n"
+        return err_msg
 
-                # Check for empty source rules
-                source_rules = f"{source}_rules"
-                if source_rules in self.config:
-                    for header in self.config[source_rules]:
-                        rule = self.config[source_rules]
+    def __check_missing_variables_output(self) -> str:
+        err_msg = ""
 
-                        if rule in [None, ""]:
-                            err_msg += f"Empty rule \"{header}\" in {source_rules}\n"
+        if "output" not in self.config:
+            return err_msg
 
-            # Identify missing variables in output section
-            for key in ["file_name", "dialect"]:
-                if key not in self.config["output"]:
-                    err_msg += f"Output {key} missing\n"
-                elif self.config["output"][key] in [None, ""]:
-                    err_msg += f"No value for output {key}\n"
+        for key in ["file_name", "dialect"]:
+            if key not in self.config["output"]:
+                err_msg += f"Output {key} missing\n"
+            elif self.config["output"][key] in [None, ""]:
+                err_msg += f"No value for output {key}\n"
 
-            if ("dialect" in self.config["output"]
-                    and self.config["output"]["dialect"] not in ["excel", "excel_tab", "unix"]):
-                err_msg += f'Invalid output dialect \"{self.config["output"]["dialect"]}\"\n'
+        valid_dialects = ["excel", "excel_tab", "unix"]
+        if "dialect" in self.config["output"] and self.config["output"]["dialect"] not in valid_dialects:
+            err_msg += f'Invalid output dialect \"{self.config["output"]["dialect"]}\"\n'
 
-        # Check for empty field rules
-        if "field_rules" in self.config:
-            for header in self.config["field_rules"]:
-                rule = self.config["field_rules"][header]
+        return err_msg
 
-                if rule in [None, ""]:
-                    err_msg += f"Empty rule for {header} in field_rules\n"
+    def __check_empty_rules(self, rule_type: str):
+        err_msg = ""
+
+        if rule_type not in self.config:
+            return err_msg
+
+        for header in self.config[rule_type]:
+            rule = self.config[rule_type][header]
+
+            if rule in [None, ""]:
+                err_msg += f"Empty rule for {header} in {rule_type}\n"
 
         return err_msg
 
