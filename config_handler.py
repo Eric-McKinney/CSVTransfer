@@ -70,15 +70,16 @@ class Config:
 
     def __check_missing_sections(self) -> str:
         err_msg = ""
-        base_sections_exist = True
 
         # Identify missing vital sections
         for section in ["defaults", "sources", "output"]:
             if section not in self.config:
-                base_sections_exist = False
                 err_msg += f"{section} not found in config file\n"
 
-        if base_sections_exist and not valid_file_names(self.config["sources"].values()):
+        if "sources" not in self.config:
+            return err_msg
+
+        if not valid_file_names(self.config["sources"].values()):
             err_msg += "Invalid source file name(s). Ensure the paths are correct in the config file\n"
 
         # Identify missing source sections
@@ -86,7 +87,7 @@ class Config:
             if source not in self.config:
                 err_msg += f"Source section \"{source}\" not found\n"
 
-        if base_sections_exist and len(self.config["sources"]) == 0:
+        if len(self.config["sources"]) == 0:
             err_msg += "No source sections found\n"
 
         return err_msg
