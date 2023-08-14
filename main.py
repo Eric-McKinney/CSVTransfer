@@ -30,7 +30,6 @@ Data = str
 Row = dict[Header, Data]
 
 CONFIG_FILE_NAME: str = "config_template.ini"
-DEBUG: bool = False  # either change this here or use --debug from command line
 HELP_MSG = """USAGE
 
 python3 main.py [OPTION]
@@ -62,10 +61,14 @@ class CSVTransfer:
     debug: bool
     strict: bool
     config: Config
-    output: Source
+    output_data: list[Row]
+    sources: list[Source]
 
-    def __init__(self, config: Config, strict=False, debug=False):
-        pass
+    def __init__(self, config: Config, strict: bool = False, debug: bool = False):
+        self.debug = debug
+        self.strict = strict
+        self.config = config
+        self.output_data = []
 
 
 def main(args: list[str] = None):
@@ -87,19 +90,13 @@ def main(args: list[str] = None):
         print(HELP_MSG)
         exit(0)
 
-    if "--debug" in args:
-        global DEBUG  # I'd prefer not to do this, but this is the only time trust
-        DEBUG = True
-
     strict: bool = "--strict" in args
+    debug: bool = "--debug" in args
 
     config: Config = Config(CONFIG_FILE_NAME)
+    transfer = CSVTransfer(config, strict=strict, debug=debug)
 
     merged_data: list[Row] = []
-    cols_name_mapping: dict = map_columns_names(config)
-    headers: list[str] = unify_headers(cols_name_mapping)
-
-    validate_rules(config, headers)
 
     print("="*80)
 
