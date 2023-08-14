@@ -59,9 +59,10 @@ class Config:
     def __validate(self) -> None:
         """
         Checks the parsed config file for improper inputs, missing information, and other improper usage. While checking
-        for these errors, error messages are accumulated and returned after the config file has been fully checked. If
+        for these errors, error messages are accumulated and printed after the config file has been fully checked. If
         there were errors detected then the program will print the error messages and exit.
         """
+
         err_msg = self.__check_missing_sections()
         err_msg += self.__check_missing_variables()
 
@@ -69,6 +70,11 @@ class Config:
             raise SystemExit(err_msg.rstrip())
 
     def __check_missing_sections(self) -> str:
+        """
+        Checks the config file for missing sections. Collects error messages according to which sections are missing.
+
+        :return: Error messages. Returns empty string if there were no missing sections.
+        """
         err_msg = ""
 
         # Identify missing vital sections
@@ -93,6 +99,12 @@ class Config:
         return err_msg
 
     def __check_missing_variables(self) -> str:
+        """
+        Checks for missing variables in config file sections. Accumulates error messages according to which variables
+        are missing from which sections.
+
+        :return: Error messages. Returns empty string if nothing was missing.
+        """
         err_msg = self.__check_missing_variables_sources()
         err_msg += self.__check_missing_variables_output()
         err_msg += self.__check_empty_rules("field_rules")
@@ -100,6 +112,12 @@ class Config:
         return err_msg
 
     def __check_missing_variables_sources(self) -> str:
+        """
+        Checks the source sections from the config file for missing variables. Accumulates error messages and returns
+        them.
+
+        :return: Error messages. Returns empty string if nothing was missing.
+        """
         err_msg = ""
 
         if "sources" not in self.config:
@@ -130,6 +148,12 @@ class Config:
         return err_msg
 
     def __check_missing_variables_output(self) -> str:
+        """
+        Checks the output section from the config file for missing variables. Accumulates error messages and returns
+        them.
+
+        :return: Error messages. Returns empty string if nothing was missing.
+        """
         err_msg = ""
 
         if "output" not in self.config:
@@ -147,17 +171,23 @@ class Config:
 
         return err_msg
 
-    def __check_empty_rules(self, rule_type: str):
+    def __check_empty_rules(self, rule_section: str):
+        """
+        Checks a rule section from the config file for empty rules. Accumulates error messages and returns them.
+        
+        :param rule_section: Name of rules section
+        :return: Error messages. Returns empty string if nothing was empty.
+        """
         err_msg = ""
 
-        if rule_type not in self.config:
+        if rule_section not in self.config:
             return err_msg
 
-        for header in self.config[rule_type]:
-            rule = self.config[rule_type][header]
+        for header in self.config[rule_section]:
+            rule = self.config[rule_section][header]
 
             if rule in [None, ""]:
-                err_msg += f"Empty rule for {header} in {rule_type}\n"
+                err_msg += f"Empty rule for {header} in {rule_section}\n"
 
         return err_msg
 
