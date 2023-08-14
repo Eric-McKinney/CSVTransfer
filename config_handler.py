@@ -174,7 +174,7 @@ class Config:
     def __check_empty_rules(self, rule_section: str):
         """
         Checks a rule section from the config file for empty rules. Accumulates error messages and returns them.
-        
+
         :param rule_section: Name of rules section
         :return: Error messages. Returns empty string if nothing was empty.
         """
@@ -272,6 +272,9 @@ class Config:
 
     def __getitem__(self, item: Any) -> configparser.SectionProxy:
         return self.config[item]
+
+    def getint(self, section: str, option: str) -> int:
+        return self.config.getint(section, option)
 
 
 def valid_file_names(file_names: Iterable[str]) -> bool:
