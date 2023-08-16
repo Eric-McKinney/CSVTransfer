@@ -8,7 +8,9 @@ class Source:
     name: str
     debug: bool
     data: list[Row]
-    rules: MutableMapping[str, str]  # sections from configparser objects are not dicts but act like them
+    col_names_map: dict[Header, Header]
+    match_by: list[Header]
+    rules: MutableMapping[Header, str]  # sections from configparser objects are not dicts but act like them
 
     def __init__(self, config: Config, source_name: str, debug: bool = False):
         self.name = source_name
@@ -17,6 +19,9 @@ class Source:
         header_row_num = config.getint(source_name, "header_row_num")
         ignored_rows = parse_ignored_rows(config[source_name]["ignored_rows"])
         self.data = self.__parse_csv(header_row_num, ignored_rows)
+
+        self.col_names_map = config.cols_name_mapping[source_name]
+        self.match_by = config[source_name]["match_by"].split(",")
         
         rules_section = f"{source_name}_rules"
         if rules_section in config:
