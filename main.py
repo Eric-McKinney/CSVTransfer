@@ -70,6 +70,21 @@ class CSVTransfer:
         self.config = config
         self.output_data = []
 
+    def transfer_source_data(self):
+        pass
+
+    def enforce_source_rules(self):
+        pass
+
+    def write_data(self):
+        pass
+
+    def __rows_match(self):
+        pass
+
+    def __data_matches_regex(self):
+        pass
+
 
 def main(args: list[str] = None):
     """
