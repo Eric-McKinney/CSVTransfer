@@ -21,6 +21,7 @@ import configparser
 import csv
 import re
 import sys
+from pathlib import Path
 from config_handler import Config
 from source_handler import Source
 
@@ -61,6 +62,8 @@ class CSVTransfer:
     debug: bool
     strict: bool
     config: Config
+    output_file_name: str
+    output_dialect: str
     output_data: list[Row]
     sources: list[Source]
 
@@ -68,7 +71,10 @@ class CSVTransfer:
         self.debug = debug
         self.strict = strict
         self.config = config
+        self.output_file_name = config["output"]["file_name"]
+        self.output_dialect = config["output"]["dialect"]
         self.output_data = []
+        self.sources = []
 
     def transfer_source_data(self):
         pass
@@ -76,14 +82,38 @@ class CSVTransfer:
     def enforce_source_rules(self):
         pass
 
-    def write_data(self):
-        pass
+    def write_data(self, append: bool = False) -> None:
+        """
+        Writes data to a csv from a list of rows where each row is a dictionary containing keys which are the
+        headers and values which are the elements of that row using the given dialect. If there is no file by the given
+        name, one will be created. If a file by the given name already exists, a prompt will ask if it should be overwritten
+        unless append is true, in which case the data is appended to said file.
 
-    def __rows_match(self):
-        pass
+        :param append: If true, will append instead of creating a new file/overwriting file after asking
+        """
 
-    def __data_matches_regex(self):
-        pass
+        if append:
+            self.__write("a")
+            return
+
+        if Path(self.output_file_name).is_file():
+            print(f"File \"{self.output_file_name}\" already exists", file=sys.stderr)
+            overwrite = input("Overwrite it (y/N)? ").lower()
+
+            if overwrite not in ["y", "yes"]:
+                return
+
+        self.__write("w")
+
+    def __write(self, mode: str) -> None:
+        """
+        Writes output data to a file using the given mode.
+        """
+
+        with open(self.output_file_name, mode, newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=self.config.output_headers, dialect=self.output_dialect)
+            writer.writeheader()
+            writer.writerows(self.output_data)
 
 
 def main(args: list[str] = None):
@@ -115,15 +145,15 @@ def main(args: list[str] = None):
 
     print("="*80)
 
-    # NOTE: The order of headers in each row dict doesn't matter,
-    #       only the order in which they are passed to the DictWriter (fieldnames param) matters
-    for source in config["sources"]:
-        print(f"Parsing {source}...", end="", flush=True)
-        parsed_source: list[Row] = parse_csv(config["sources"][source], config.getint(source, "header_row_num"),
-                                             parse_ignored_rows(config[source]["ignored_rows"]))
+    # NOTE: The order of headers in each row dict doesn't matter, only the order in which they are passed to the
+    #       DictWriter (fieldnames param) matters
+    for source_name in config["sources"]:
+        print(f"Parsing {source_name}...", end="", flush=True)
+        source = Source(config, source_name, debug=transfer.debug)
         print("DONE", flush=True)
 
         print(f"Transferring {source}'s data...", end="", flush=True)
+        transfer.transfer_source_data()
         field_rules = None if "field_rules" not in config else config["field_rules"]
         transfer_data(source, parsed_source, merged_data, cols_name_mapping[source],
                       config[source]["match_by"].split(","), unmatched_output=config["output"]["unmatched_file_name"],
@@ -131,11 +161,13 @@ def main(args: list[str] = None):
         print("DONE", flush=True)
 
     print("Enforcing source rule(s)...", end="", flush=True)
+    transfer.enforce_source_rules()
     source_rules = parse_source_rules(config)
     enforce_source_rules(merged_data, source_rules)
     print("DONE", flush=True)
 
     print("Writing results to output file...", end="", flush=True)
+    transfer.write_data()
     write_csv(config["output"]["file_name"], headers, merged_data, config["output"]["dialect"])
     print(f"DONE\n\nResults can be found in {config['output']['file_name']}")
 
@@ -196,7 +228,7 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
 
         # attempt to find a match and transfer data if it would go into an empty field
         for out_row in output:
-            if rows_match(row, out_row, match_by, names_map):
+            if rows_match(row, out_row):
                 found_match = True
 
                 for header in data_to_transfer:
@@ -235,23 +267,21 @@ def transfer_data(source_name: str, source: list[Row], output: list[Row], names_
             write_csv(unmatched_output, headers, unmatched_data, dialect, append=append)
 
 
-def rows_match(row: Row, out_row: Row, match_by: list[Header],
-               names_map: dict[Header, Header]) -> bool:
+def rows_match(source: Source, row: Row, out_row: Row) -> bool:
     """
     Determines whether two rows match one another. Two rows are considered matching if the data under one or more
     specified headers is identical. For the row parameter this means the headers in the match_by list. For the out_row
     parameter this means the headers that are mapped (values) to the headers in the match_by (keys) in the names_map.
 
+    :param source: Source the row is from
     :param row: Row from source
     :param out_row: Row in output
-    :param match_by: Headers to match data by
-    :param names_map: Mapping of headers in sources to headers in the output
     :return: True if the rows match, false if not
     """
     matches = False
 
-    for match in match_by:
-        out_match = names_map[match]
+    for match in source.match_by:
+        out_match = source.col_names_map[match]
         if out_match in out_row and row[match] != "" and out_row[out_match] == row[match]:
             matches = True
             break
@@ -303,52 +333,6 @@ def enforce_source_rules(data: list[Row], rules: dict[str, configparser.SectionP
             row["Source rules broken"] = "None"
         else:
             row["Source rules broken"] = rules_broken
-
-
-def write_csv(file_name: str, headers: list[str], data: list[Row], dialect: str, append: bool = False) -> None:
-    """
-    Writes data to a csv from a list of rows where each row is a dictionary containing keys which are the
-    headers and values which are the elements of that row using the given dialect. If there is no file by the given
-    name, one will be created. If a file by the given name already exists, a prompt will ask if it should be overwritten
-    unless append is true, in which case the data is appended to said file.
-
-    :param file_name: Name of file to be written to or created
-    :param headers: Headers for the output file in the order that they should appear
-    :param data: Data to write to the file
-    :param dialect: csv dialect to use for writing
-    :param append: If true, will append instead of creating a new file/overwriting file after asking
-    :return:
-    """
-
-    mode = "a" if append else "x"
-    try:
-        write_data(file_name, mode, headers, data, dialect)
-    except FileExistsError:
-        print(f"File \"{file_name}\" already exists", file=sys.stderr)
-        overwrite = input("Overwrite it (y/N)? ").lower()
-
-        if overwrite in ["y", "yes"]:
-            write_data(file_name, "w", headers, data, dialect)
-        else:
-            return
-
-
-def write_data(file_name: str, mode, headers: list[str], data: list[Row], dialect: str) -> None:
-    """
-    Writes data to a file by the given name using the given mode and dialect.
-
-    :param file_name: Name of file to be written to or created.
-    :param mode: What mode to open the file in (w, r, a, etc.)
-    :param headers: List of the headers for csv file.
-    :param data: Data to write to the file.
-    :param dialect: csv dialect to use for writing
-    :raises FileExistsError: If mode is "x" and there is already a file by the name file_name.
-    :return:
-    """
-    with open(file_name, mode, newline='') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=headers, dialect=dialect)
-        writer.writeheader()
-        writer.writerows(data)
 
 
 if __name__ == "__main__":
