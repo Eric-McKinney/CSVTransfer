@@ -22,6 +22,7 @@ import csv
 import re
 import sys
 from pathlib import Path
+from typing import MutableMapping
 from config_handler import Config
 from source_handler import Source
 
@@ -63,6 +64,7 @@ class CSVTransfer:
     strict: bool
     config: Config
     output_file_name: str
+    unmatched_file_name: str
     output_dialect: str
     output_data: list[Row]
     sources: list[Source]
@@ -72,29 +74,105 @@ class CSVTransfer:
         self.strict = strict
         self.config = config
         self.output_file_name = config["output"]["file_name"]
+        self.unmatched_file_name = config["output"]["unmatched_file_name"]
         self.output_dialect = config["output"]["dialect"]
         self.output_data = []
         self.sources = []
 
-    def transfer_source_data(self):
-        pass
+    def transfer_source_data(self, source: Source) -> None:
+        """
+        Moves data from columns in the source whose headers appear in names_map to the output under the corresponding header
+        name that appear in the names_map. A match of the data transferred this way is attempted. The data is matched
+        against data that exists in the output under the headers that appear in the names_map as values associated with the
+        keys that are contained in match_by. If a match is found then any data from that row that can fill an empty field
+        will be transferred. For the rest of the data from that row nothing will be done (it won't be considered unmatched).
+        data. If a match cannot be found then the data to be transferred will be appended to the output as long as strict is
+        not true. If strict is true then this data will contribute to the unmatched data instead of being included in the
+        output. If field_rules is given, all data from fields being transferred must match the associated field_rules to be transferred.
+        Data that does not match the field_rules will count towards the unmatched data. If unmatched_file is given a value then
+        unmatched data will be written to that file.
+
+        :param source: Source whose data is to be transferred
+        """
+        first_source: bool = self.sources == []
+        self.sources.append(source)
+
+        output_buffer: list[Row] = []  # Buffering instead of appending directly to avoid matching data from same source
+        unmatched_file: str = self.config["output"]["unmatched_file_name"]
+        unmatched_data: list[Row] = []
+
+        field_rules: MutableMapping[Header, str]
+        if "field_rules" not in self.config:
+            field_rules = {}
+        else:
+            field_rules = self.config["field_rules"]
+
+        for row in source.data:
+            data_to_transfer: Row = {}  # will contain only the data we want to transfer from the row
+            found_match: bool = False
+
+            # Extract data
+            data_to_transfer["Sources found in"] = source.name
+            data_to_transfer["Source rules broken"] = "Not checked"
+            for header in source.col_names_map:
+                data_to_transfer[source.col_names_map[header]] = row[header]
+
+            if not data_matches_regex(data_to_transfer, field_rules):
+                data = {"Sources found in": source.name, "Reason it didn't match": "Data didn't match field_rule(s)"}
+                for header in source.col_names_map:
+                    data[header] = row[header]
+
+                unmatched_data.append(data)
+                continue
+
+            # attempt to find a match and transfer data if it would go into an empty field
+            for out_row in self.output_data:
+                if rows_match(source, row, out_row):
+                    found_match = True
+
+                    for header in data_to_transfer:
+                        if header == "Sources found in":  # append source name to output under "sources found in"
+                            if header not in out_row.keys():
+                                out_row[header] = data_to_transfer[header]
+                            elif source.name not in out_row[header].split(", "):  # avoid duplicates of source names
+                                out_row[header] += f", {data_to_transfer[header]}"
+
+                            continue
+
+                        # check if data is already there before moving data
+                        if header not in out_row.keys() or out_row[header] in ["", None]:
+                            out_row[header] = data_to_transfer[header]
+
+            if (not self.strict or first_source) and not found_match:
+                output_buffer.append(data_to_transfer)
+            elif unmatched_file not in [None, ""] and not found_match:
+                data = {"Sources found in": source.name, "Reason it didn't match": "Strict on and no match found"}
+                for header in source.col_names_map:
+                    data[header] = row[header]
+
+                unmatched_data.append(data)
+
+        self.output_data.extend(output_buffer)
+
+        if unmatched_file not in [None, ""]:
+            append = not first_source
+
+            if unmatched_data == []:
+                with open(unmatched_file, "a" if append else "w") as f:
+                    f.write(f"{source.name} had no unmatched data :)\n")
+            else:
+                headers: list[str] = ["Sources found in", "Reason it didn't match"]
+                headers.extend(source.col_names_map.keys())
+                self.__write_unmatched_data(headers, unmatched_data, append=append)
 
     def enforce_source_rules(self):
         pass
 
-    def write_data(self, append: bool = False) -> None:
+    def write_data(self) -> None:
         """
-        Writes data to a csv from a list of rows where each row is a dictionary containing keys which are the
-        headers and values which are the elements of that row using the given dialect. If there is no file by the given
-        name, one will be created. If a file by the given name already exists, a prompt will ask if it should be overwritten
-        unless append is true, in which case the data is appended to said file.
-
-        :param append: If true, will append instead of creating a new file/overwriting file after asking
+        Writes transferred data to a csv. If a file by the given name already exists, a prompt will ask if it should be
+        overwritten.
         """
-
-        if append:
-            self.__write("a")
-            return
 
         if Path(self.output_file_name).is_file():
             print(f"File \"{self.output_file_name}\" already exists", file=sys.stderr)
@@ -103,17 +181,26 @@ class CSVTransfer:
             if overwrite not in ["y", "yes"]:
                 return
 
-        self.__write("w")
+        self.__write_csv(self.output_file_name, self.output_data, self.config.output_headers, mode="w")
 
-    def __write(self, mode: str) -> None:
+    def __write_unmatched_data(self, headers: list[Header], data: list[Row], append: bool) -> None:
+        mode = "a" if append else "w"
+        self.__write_csv(self.unmatched_file_name, data, headers, mode=mode)
+
+    def __write_csv(self, file_name: str, data: list[Row], headers: list[Header], mode: str) -> None:
         """
-        Writes output data to a file using the given mode.
+        Writes data to a file using the given mode under the given headers.
+
+        :param file_name: Name of file to write to
+        :param data: Data to write
+        :param headers: Headers to use when writing
+        :param mode: Mode used when calling open
         """
 
-        with open(self.output_file_name, mode, newline='') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=self.config.output_headers, dialect=self.output_dialect)
+        with open(file_name, mode, newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=headers, dialect=self.output_dialect)
             writer.writeheader()
-            writer.writerows(self.output_data)
+            writer.writerows(data)
 
 
 def main(args: list[str] = None):
@@ -141,8 +228,6 @@ def main(args: list[str] = None):
     config: Config = Config(CONFIG_FILE_NAME)
     transfer = CSVTransfer(config, strict=strict, debug=debug)
 
-    merged_data: list[Row] = []
-
     print("="*80)
 
     # NOTE: The order of headers in each row dict doesn't matter, only the order in which they are passed to the
@@ -153,11 +238,7 @@ def main(args: list[str] = None):
         print("DONE", flush=True)
 
         print(f"Transferring {source}'s data...", end="", flush=True)
-        transfer.transfer_source_data()
-        field_rules = None if "field_rules" not in config else config["field_rules"]
-        transfer_data(source, parsed_source, merged_data, cols_name_mapping[source],
-                      config[source]["match_by"].split(","), unmatched_output=config["output"]["unmatched_file_name"],
-                      dialect=config["output"]["dialect"], regex=field_rules, strict=strict)
+        transfer.transfer_source_data(source)
         print("DONE", flush=True)
 
     print("Enforcing source rule(s)...", end="", flush=True)
@@ -175,96 +256,6 @@ def main(args: list[str] = None):
         print(f"Unmatched data can be found in {config['output']['unmatched_file_name']}")
 
     print("="*80)
-
-
-def transfer_data(source_name: str, source: list[Row], output: list[Row], names_map: dict[Header, Header],
-                  match_by: list[Header], unmatched_output: str = None, dialect: str = "excel",
-                  regex: dict[Header, str] = None, strict: bool = False) -> None:
-    """
-    Moves data from columns in the source whose headers appear in names_map to the output under the corresponding header
-    name that appear in the names_map. A match of the data transferred this way is attempted. The data is matched
-    against data that exists in the output under the headers that appear in the names_map as values associated with the
-    keys that are contained in match_by. If a match is found then any data from that row that can fill an empty field
-    will be transferred. For the rest of the data from that row nothing will be done (it won't be considered unmatched).
-    data. If a match cannot be found then the data to be transferred will be appended to the output as long as strict is
-    not true. If strict is true then this data will contribute to the unmatched data instead of being included in the
-    output. If regex is given, all data from fields being transferred must match the associated regex to be transferred.
-    Data that does not match the regex will count towards the unmatched data. If unmatched_output is given a value then
-    unmatched data will be written to that file.
-
-    :param source_name: Name of the source which the source file represents
-    :param source: Parsed source file
-    :param output: Destination of data from source files
-    :param names_map: Column(s) whose data will be transferred and the names of the columns in the output to put them in
-    :param match_by: Columns from source file to align data by
-    :param unmatched_output: Name of file to output unmatched values to. If no name is provided, unmatched values will
-    not be recorded
-    :param dialect: Dialect to write unmatched output in (same dialect as regular output)
-    :param regex: Dictionary of fields/headers (keys) and the regex (values) to validate them by
-    :param strict: If true, sources after the first must match at least one field from match by to have data transferred
-    :return:
-    """
-
-    first_source: bool = output == []
-    buffer: list[Row] = []  # Buffering instead of appending to output directly to avoid matching data from same source
-    unmatched_data: list[Row] = []
-    for row in source:
-        data_to_transfer: Row = {}  # will contain only the data we want to transfer from the row
-        found_match: bool = False
-
-        # Extract data
-        data_to_transfer["Sources found in"] = source_name
-        data_to_transfer["Source rules broken"] = "Not checked"
-        for header in names_map:
-            data_to_transfer[names_map[header]] = row[header]
-
-        if regex is not None and not data_matches_regex(data_to_transfer, regex):
-            data = {"Sources found in": source_name, "Reason it didn't match": "Data didn't match regex/field_rule"}
-            for header in names_map:
-                data[header] = row[header]
-
-            unmatched_data.append(data)
-            continue
-
-        # attempt to find a match and transfer data if it would go into an empty field
-        for out_row in output:
-            if rows_match(row, out_row):
-                found_match = True
-
-                for header in data_to_transfer:
-                    if header == "Sources found in":  # append source name to output under "sources found in"
-                        if header not in out_row.keys():
-                            out_row[header] = data_to_transfer[header]
-                        elif source_name not in out_row[header].split(", "):  # avoid duplicates of source names
-                            out_row[header] += f", {data_to_transfer[header]}"
-
-                        continue
-
-                    # check if data is already there before moving data
-                    if header not in out_row.keys() or out_row[header] in ["", None]:
-                        out_row[header] = data_to_transfer[header]
-
-        if (not strict or first_source) and not found_match:
-            buffer.append(data_to_transfer)
-        elif unmatched_output not in [None, ""] and not found_match:
-            data = {"Sources found in": source_name, "Reason it didn't match": "Strict on and no match found"}
-            for header in names_map:
-                data[header] = row[header]
-
-            unmatched_data.append(data)
-
-    output.extend(buffer)
-
-    if unmatched_output not in [None, ""]:
-        append = not first_source
-
-        if unmatched_data == []:
-            with open(unmatched_output, "a" if append else "w") as f:
-                f.write(f"{source_name} had no unmatched data :)\n")
-        else:
-            headers: list[str] = ["Sources found in", "Reason it didn't match"]
-            headers.extend(names_map.keys())
-            write_csv(unmatched_output, headers, unmatched_data, dialect, append=append)
 
 
 def rows_match(source: Source, row: Row, out_row: Row) -> bool:
@@ -289,7 +280,7 @@ def rows_match(source: Source, row: Row, out_row: Row) -> bool:
     return matches
 
 
-def data_matches_regex(data: Row, regex: dict[Header, str]) -> bool:
+def data_matches_regex(data: Row, regex: MutableMapping[Header, str]) -> bool:
     """
     Checks if given row's data that is being transferred matches the given regex for specific fields/headers. If a regex
     appears that refers to data not being transferred, it will be ignored.
@@ -305,7 +296,7 @@ def data_matches_regex(data: Row, regex: dict[Header, str]) -> bool:
     return True
 
 
-def enforce_source_rules(data: list[Row], rules: dict[str, configparser.SectionProxy]) -> None:
+def enforce_source_rules(data: list[Row], rules: dict[str, MutableMapping[Header, str]]) -> None:
     """
     Goes through the data checking if source rules are obeyed. All broken rules are documented in the "Source rules
     broken" column with the format "source_name:rule_broken" (quotes not included). If no source rules are broken then
