@@ -1,32 +1,26 @@
-↖ Table of Contents
-
 <h1 align="center">CSVTransfer</h1>
 
-The purpose of CSVTransfer is to enable the transfer of select data from an 
-arbitrary number of csv files into a new file. Data can be used to "match by" 
-effectively merging data which shares at least one match_by field with other 
-data. Regex filters can be applied to csv fields/columns. The data that does 
-not match these filters and other data considered unmatched can be output to 
-a file as well.
+CSVTransfer enables the transfer, filtering, and consolidation of data from an
+arbitrary number of csv files into a single csv file.
 
 ## Setup
-Download `main.py`, `config_template.ini`, and optionally this `README.md` for 
-future reference (I don't have anything fancy set up you have to do it 
-through GitHub lol). Once you've done that, make sure you have python 
-installed. Next, you need to fill out the config template as described further
-down in this README. After that you should be good to go.
+
+Download `main.py`, `config_template.ini`, and optionally this `README.md` for
+future reference. Next, make sure you have python 3 installed. Finally, you
+need to fill out the config template as described further down in this README.
+Alternatively, download and run the script `config_gen.py` from this repo to
+interactively create a config file without worrying too much about the syntax.
 
 ## Usage
+
 For this script to be able to see and read the csv files they must be in the
-same directory this script is invoked in or in a subdirectory. Once you have 
+same directory this script is invoked in or in a subdirectory. Once you have
 your csvs where you want them, fill out the config file (more on that below).
-In the command prompt or shell (in the same directory as main.py) do 
-`py main.py` or `python3 main.py` depending on your environment. Of course if
-you want to you can use the absolute path of the script to execute it elsewhere
-like so `python3 /absolute/path/to/main.py` or the same thing using `py` which
-depends on your system.
+In the command prompt or shell (in the same directory as main.py) run `py
+main.py` or `python3 main.py` depending on your environment.
 
 ### Options
+
 Currently, the only options are `-h`, `--help`, `--debug`, and `--strict`.
 
 **-h**, **--help**
@@ -142,6 +136,7 @@ rid of bad data.
 ## Config File Fields (and what to put in them)
 
 ### defaults section
+
 **header_row_num**
 > The number of the row (starting at 0) which contains the headers you want to
 use.
@@ -190,6 +185,7 @@ override the value given in defaults.
 
 ---
 ### output section
+
 **file_name**
 > The name of the output file. If this collides with a file in the same 
 directory as the script, you will be prompted with a choice of whether you 
@@ -208,6 +204,7 @@ info can be found in the
 
 ---
 ### source rules section(s)
+
 > Optionally provide regex to match fields from individual sources by. To see 
 what types of regex syntax are supported, see the
 [python regex library documentation](https://docs.python.org/3/library/re.html).
@@ -232,6 +229,7 @@ fish bowl serial number = 4
 
 ---
 ### field_rules section
+
 > Optionally put regex to filter fields by. To create a rule, put the header that 
 will appear in the output and assign it the regex you want data to match. Data 
 that does not match this regex will not be transferred and will count towards 
@@ -246,6 +244,7 @@ IPv4 address = ^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$
 
 ---
 ### Example Config File
+
 [config_example.ini](example_files/config_example.ini) (more in
 [example_files/](example_files))
 ```ini
