@@ -29,15 +29,18 @@ def main():
         set_default_configurations(config, args.debug)
 
 
-def parse_config(config_file_path: str, debug: bool) -> cfg.ConfigParser:
+def debug_print(debug: bool, msg: str) -> None:
     if debug:
-        print(f"finding configuration file {config_file_path}...")
+        print(msg, file=sys.stderr)
+
+
+def parse_config(config_file_path: str, debug: bool) -> cfg.ConfigParser:
+    debug_print(f"finding configuration file {config_file_path}...")
 
     if not os.path.exists(os.path.join(os.getcwd(), config_file_path)):
         raise SystemExit(f"error: config file \"{config_file_path}\" does not exist")
 
-    if debug:
-        print("parsing configuration file...")
+    debug_print("parsing configuration file...")
 
     config = cfg.ConfigParser(allow_no_value=True)
     config.optionxform = str
