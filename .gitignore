@@ -1,3 +1,7 @@
 __pycache__
 test_*
 .idea/
+bin/
+lib/
+lib64
+pyvenv.cfg
