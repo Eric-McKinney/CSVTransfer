@@ -82,6 +82,19 @@ def key_exists(config: cfg.ConfigParser, section_name: str, key: str, use_defaul
     return ""
 
 
+def validate_output_dialect(config: cfg.ConfigParser, debug: bool) -> str:
+    valid_dialects = {"excel", "excel_tab", "unix"}
+    output_dialect = None
+
+    if "output" in config and "dialect" in config["output"]:
+        output_dialect = config["output"]["dialect"]
+
+    if output_dialect not in [None, ""] and output_dialect not in valid_dialects:
+        return f"error: {output_dialect} is not a valid output dialect (excel, excel_tab, unix)\n"
+
+    return ""
+
+
 def validate_config(config: cfg.ConfigParser, debug: bool) -> None:
     error_msg = ""
     warn_msg = ""
@@ -89,31 +102,29 @@ def validate_config(config: cfg.ConfigParser, debug: bool) -> None:
     for required_section in ["sources", "output"]:
         error_msg += section_exists(required_section)
 
-    for source_file in config["sources"].values():
+    source_section = config["sources"] if "sources" in config else dict()
+    for source_file in source_section.values():
         error_msg += source_csv_exists(source_file)
 
-    for source_name in config["sources"]:
+    for source_name in source_section:
         if source_name not in config:
             error_msg += f"error: source {source_name} has no dedicated config section\n"
 
-    for source_name in config["sources"]:
+    for source_name in source_section:
         for required_key in ["target_columns", "header_row_num"]:
             error_msg += key_exists(config, source_name, required_key)
 
     for required_key in ["file_name", "dialect"]:
         error_msg += key_exists(config, "output", required_key, use_default=False)
 
-    valid_output_dialects = {"excel", "excel_tab", "unix"}
-    output_dialect = config["output"]["dialect"]
-    if "dialect" in config["output"] and output_dialect not in valid_output_dialects:
-        error_msg += f"error: {output_dialect} is not a valid output dialect (excel, excel_tab, unix)\n"
+    error_msg += validate_output_dialect(config, debug)
 
-    for header in config["field_rules"]:
+    field_rules_section = config["field_rules"] if "field_rules" in config else dict()
+    for header in field_rules_section:
         rule = config["field_rules"][header]
         if rule in [None, ""]:
             warn_msg += f"warning: field rule for {header} is empty\n"
 
-    # TODO: make sure all validity checks account for the section/key not existing
     # TODO: add debug diagnostic messages
 
     if error_msg != "":
