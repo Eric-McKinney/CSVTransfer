@@ -165,6 +165,7 @@ def validate_config(config: cfg.ConfigParser) -> None:
 
 
 def set_default_configurations(config: cfg.ConfigParser) -> None:
+    debug_print("setting default values in configuration...")
     for source in config["sources"]:
         for key in config["defaults"]:
             if key not in config[source]:
@@ -174,6 +175,8 @@ def set_default_configurations(config: cfg.ConfigParser) -> None:
             default_key = config["defaults"][key]
 
             if source_key in [None, ""] and default_key not in [None, ""]:
+                debug_print(f"{source_key} empty/missing in {source} section, applying \
+                            default value {default_key}", indent=1)
                 config[source][key] = default_key
 
 
