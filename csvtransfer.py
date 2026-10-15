@@ -2,7 +2,11 @@ import argparse
 import configparser as cfg
 import os
 import pandas as pd
+import pprint
 import sys
+
+
+DEBUG = False
 
 
 def main():
@@ -22,19 +26,33 @@ def main():
 
     args = parser.parse_args(sys.argv[1:])
 
-    config = parse_config(args.config_file_path, args.debug)
-    validate_config(config, args.debug)
+    global DEBUG
+    DEBUG = args.debug
+
+    config = parse_config(args.config_file_path)
+    validate_config(config)
 
     if "defaults" in config:
-        set_default_configurations(config, args.debug)
+        set_default_configurations(config)
 
 
-def debug_print(debug: bool, msg: str) -> None:
-    if debug:
+def debug_print(msg: str, indent: int = 0) -> None:
+    if DEBUG:
+        print("  " * indent, file=sys.stderr, end="")
         print(msg, file=sys.stderr)
 
 
-def parse_config(config_file_path: str, debug: bool) -> cfg.ConfigParser:
+def dump_config(config: cfg.ConfigParser) -> None:
+    config_dict = dict(config)
+    config_dict.pop("DEFAULT")  # added by configparser
+
+    for section_name, section in config_dict.items():
+        config_dict[section_name] = dict(section)
+
+    pprint.pp(config_dict, stream=sys.stderr)
+
+
+def parse_config(config_file_path: str) -> cfg.ConfigParser:
     debug_print(f"finding configuration file {config_file_path}...")
 
     if not os.path.exists(os.path.join(os.getcwd(), config_file_path)):
@@ -45,6 +63,10 @@ def parse_config(config_file_path: str, debug: bool) -> cfg.ConfigParser:
     config = cfg.ConfigParser(allow_no_value=True)
     config.optionxform = str
     config.read(config_file_path)
+
+    debug_print("dumping parsed configuration...")
+    if DEBUG:
+        dump_config(config)
 
     return config
 
@@ -82,7 +104,7 @@ def key_exists(config: cfg.ConfigParser, section_name: str, key: str, use_defaul
     return ""
 
 
-def validate_output_dialect(config: cfg.ConfigParser, debug: bool) -> str:
+def validate_output_dialect(config: cfg.ConfigParser) -> str:
     valid_dialects = {"excel", "excel_tab", "unix"}
     output_dialect = None
 
@@ -95,39 +117,47 @@ def validate_output_dialect(config: cfg.ConfigParser, debug: bool) -> str:
     return ""
 
 
-def validate_config(config: cfg.ConfigParser, debug: bool) -> None:
+def validate_config(config: cfg.ConfigParser) -> None:
     error_msg = ""
     warn_msg = ""
 
+    debug_print("validating configuration (error & warning messages printed after)...")
+
+    debug_print("checking if required sections exist...", indent=1)
     for required_section in ["sources", "output"]:
         error_msg += section_exists(required_section)
 
+    debug_print("checking if source files in sources section exist...", indent=1)
     source_section = config["sources"] if "sources" in config else dict()
     for source_file in source_section.values():
         error_msg += source_csv_exists(source_file)
 
+    debug_print("checking if each source has its own config section...", indent=1)
     for source_name in source_section:
         if source_name not in config:
             error_msg += f"error: source {source_name} has no dedicated config section\n"
 
+    debug_print("checking if required values are in each source section...", indent=1)
     for source_name in source_section:
         for required_key in ["target_columns", "header_row_num"]:
             error_msg += key_exists(config, source_name, required_key)
 
+    debug_print("checking if required values are in output section...", indent=1)
     for required_key in ["file_name", "dialect"]:
         error_msg += key_exists(config, "output", required_key, use_default=False)
 
+    debug_print("checking if output dialect is valid...", indent=1)
     error_msg += validate_output_dialect(config, debug)
 
+    debug_print("checking if any field rules are empty...", indent=1)
     field_rules_section = config["field_rules"] if "field_rules" in config else dict()
     for header in field_rules_section:
         rule = config["field_rules"][header]
         if rule in [None, ""]:
             warn_msg += f"warning: field rule for {header} is empty\n"
 
-    # TODO: add debug diagnostic messages
-
     if error_msg != "":
+        debug_print("configuration has errors, printing error messages and exiting...")
         raise SystemExit(error_msg.rstrip())
 
     if warn_msg != "":
