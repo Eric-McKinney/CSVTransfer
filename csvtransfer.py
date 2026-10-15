@@ -125,7 +125,7 @@ def validate_config(config: cfg.ConfigParser) -> None:
 
     debug_print("checking if required sections exist...", indent=1)
     for required_section in ["sources", "output"]:
-        error_msg += section_exists(required_section)
+        error_msg += section_exists(config, required_section)
 
     debug_print("checking if source files in sources section exist...", indent=1)
     source_section = config["sources"] if "sources" in config else dict()
@@ -147,7 +147,7 @@ def validate_config(config: cfg.ConfigParser) -> None:
         error_msg += key_exists(config, "output", required_key, use_default=False)
 
     debug_print("checking if output dialect is valid...", indent=1)
-    error_msg += validate_output_dialect(config, debug)
+    error_msg += validate_output_dialect(config)
 
     debug_print("checking if any field rules are empty...", indent=1)
     field_rules_section = config["field_rules"] if "field_rules" in config else dict()
@@ -175,8 +175,8 @@ def set_default_configurations(config: cfg.ConfigParser) -> None:
             default_key = config["defaults"][key]
 
             if source_key in [None, ""] and default_key not in [None, ""]:
-                debug_print(f"{source_key} empty/missing in {source} section, applying \
-                            default value {default_key}", indent=1)
+                debug_print(f"{key} empty/missing in {source} section, applying "
+                            f"default value {default_key}", indent=1)
                 config[source][key] = default_key
 
 
