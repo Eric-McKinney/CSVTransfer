@@ -149,12 +149,12 @@ def validate_config(config: cfg.ConfigParser) -> None:
     debug_print("checking if output dialect is valid...", indent=1)
     error_msg += validate_output_dialect(config)
 
-    debug_print("checking if any field rules are empty...", indent=1)
-    field_rules_section = config["field_rules"] if "field_rules" in config else dict()
-    for header in field_rules_section:
-        rule = config["field_rules"][header]
+    debug_print("checking if any output filters are empty...", indent=1)
+    filters_section = config["output_filters"] if "output_filters" in config else dict()
+    for header in filters_section:
+        rule = config["output_filters"][header]
         if rule in [None, ""]:
-            warn_msg += f"warning: field rule for {header} is empty\n"
+            warn_msg += f"warning: output filter for {header} is empty\n"
 
     if error_msg != "":
         debug_print("configuration has errors, printing error messages and exiting...")
