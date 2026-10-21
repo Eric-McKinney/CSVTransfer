@@ -31,6 +31,8 @@ def main():
 
     config = parse_config(args.config_file_path)
     validate_config(config)
+    output_columns = get_output_columns(config)
+    validate_output_filters(config, output_columns)
 
     if "defaults" in config:
         set_default_configurations(config)
@@ -119,8 +121,6 @@ def validate_output_dialect(config: cfg.ConfigParser) -> str:
 
 def validate_config(config: cfg.ConfigParser) -> None:
     error_msg = ""
-    warn_msg = ""
-
     debug_print("validating configuration (error & warning messages printed after)...")
 
     debug_print("checking if required sections exist...", indent=1)
@@ -128,19 +128,29 @@ def validate_config(config: cfg.ConfigParser) -> None:
         error_msg += section_exists(config, required_section)
 
     debug_print("checking if source files in sources section exist...", indent=1)
-    source_section = config["sources"] if "sources" in config else dict()
-    for source_file in source_section.values():
+    sources_section = config["sources"] if "sources" in config else dict()
+    for source_file in sources_section.values():
         error_msg += source_csv_exists(source_file)
 
     debug_print("checking if each source has its own config section...", indent=1)
-    for source_name in source_section:
+    for source_name in sources_section:
         if source_name not in config:
             error_msg += f"error: source {source_name} has no dedicated config section\n"
 
     debug_print("checking if required values are in each source section...", indent=1)
-    for source_name in source_section:
+    for source_name in sources_section:
         for required_key in ["target_columns", "header_row_num"]:
             error_msg += key_exists(config, source_name, required_key)
+
+    debug_print("checking if each source's join_by_columns are present in target_columns...")
+    for source_name in sources_section:
+        target_cols = config[source_name].get("target_columns", "").split(",")
+        join_cols = config[source_name].get("join_by_columns", "").split(",")
+
+        for col in join_cols:
+            if col not in target_cols:
+                error_msg += f"error: joining column {col} is not a target column for " \
+                             f"source {source_name}\n"
 
     debug_print("checking if required values are in output section...", indent=1)
     for required_key in ["file_name", "dialect"]:
@@ -149,16 +159,58 @@ def validate_config(config: cfg.ConfigParser) -> None:
     debug_print("checking if output dialect is valid...", indent=1)
     error_msg += validate_output_dialect(config)
 
-    debug_print("checking if any output filters are empty...", indent=1)
+    if error_msg != "":
+        debug_print("configuration has errors, printing error messages and exiting...")
+        raise SystemExit(error_msg.rstrip())
+
+
+def remap_column(config: cfg.ConfigParser, source_name: str, header: str) -> str:
+    remapping_section_name = f"{source_name}_column_remapping"
+    if remapping_section_name not in config:
+        return header
+
+    if header not in config[remapping_section_name]:
+        return header
+
+    return config[remapping_section_name][header]
+
+
+def get_output_columns(config: cfg.ConfigParser) -> List[str]:
+    join_cols: Set[str] = set()
+    data_cols: Set[str] = set()
+    debug_print("getting full list of output columns...")
+
+    for source_name in config["sources"]:
+        debug_print(f"getting columns from source {source_name}...", indent=1)
+        tcols = config[source_name]["target_columns"].split(",")
+        remap_col = lambda col: remap_column(config, source_name, col)
+        data_cols |= set(map(remap_col, tcols))
+        debug_print(f"remapped target columns: {tcols} to {data_cols}", indent=2)
+
+        if "join_by_columns" in config[source_name]:
+            join_by = config[source_name]["join_by_columns"].split(",")
+            join_cols |= set(map(remap_col, join_by))
+
+    # put columns being used to join data at the front
+    output_columns = list(join_cols) + list(data_cols - join_cols)
+    return output_columns
+
+
+def validate_output_filters(config: cfg.ConfigParser, output_columns: List[str]) -> None:
+    warn_msg = ""
     filters_section = config["output_filters"] if "output_filters" in config else dict()
+
+    debug_print("checking if any output filters are empty...", indent=1)
     for header in filters_section:
         rule = config["output_filters"][header]
         if rule in [None, ""]:
             warn_msg += f"warning: output filter for {header} is empty\n"
 
-    if error_msg != "":
-        debug_print("configuration has errors, printing error messages and exiting...")
-        raise SystemExit(error_msg.rstrip())
+    debug_print("checking if any filters apply to columns not in output...", indent=1)
+    for header in filters_section:
+        if header not in output_columns:
+            warn_msg += f"warning: output filter for {header} column when no " \
+                        f"{header} column exists in output\n"
 
     if warn_msg != "":
         print(warn_msg.rstrip(), file=sys.stderr)
