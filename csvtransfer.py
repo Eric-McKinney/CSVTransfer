@@ -142,7 +142,8 @@ def validate_config(config: cfg.ConfigParser) -> None:
         for required_key in ["target_columns", "header_row_num"]:
             error_msg += key_exists(config, source_name, required_key)
 
-    debug_print("checking if each source's join_by_columns are present in target_columns...")
+    debug_print("checking if each source's join_by_columns are present in target_columns...",
+                indent=1)
     for source_name in sources_section:
         target_cols = config[source_name].get("target_columns", "").split(",")
         join_cols = config[source_name].get("join_by_columns", "").split(",")
@@ -169,10 +170,13 @@ def remap_column(config: cfg.ConfigParser, source_name: str, header: str) -> str
     if remapping_section_name not in config:
         return header
 
-    if header not in config[remapping_section_name]:
+    remapping_section = config[remapping_section_name]
+
+    if header not in remapping_section:
         return header
 
-    return config[remapping_section_name][header]
+    debug_print(f"remapped {header} to {remapping_section[header]}", indent=2)
+    return remapping_section[header]
 
 
 def get_output_columns(config: cfg.ConfigParser) -> List[str]:
@@ -184,21 +188,29 @@ def get_output_columns(config: cfg.ConfigParser) -> List[str]:
         debug_print(f"getting columns from source {source_name}...", indent=1)
         tcols = config[source_name]["target_columns"].split(",")
         remap_col = lambda col: remap_column(config, source_name, col)
-        data_cols |= set(map(remap_col, tcols))
-        debug_print(f"remapped target columns: {tcols} to {data_cols}", indent=2)
 
         if "join_by_columns" in config[source_name]:
             join_by = config[source_name]["join_by_columns"].split(",")
+            tcols = list(filter(lambda x: x not in join_by, tcols))
             join_cols |= set(map(remap_col, join_by))
 
+        data_cols |= set(map(remap_col, tcols))
+
+    join_cols = list(join_cols)
+    data_cols = list(data_cols)
+    join_cols.sort()
+    data_cols.sort()
+
     # put columns being used to join data at the front
-    output_columns = list(join_cols) + list(data_cols - join_cols)
+    output_columns = join_cols + data_cols
+    debug_print(f"output columns: {output_columns}", indent=1)
     return output_columns
 
 
 def validate_output_filters(config: cfg.ConfigParser, output_columns: List[str]) -> None:
     warn_msg = ""
     filters_section = config["output_filters"] if "output_filters" in config else dict()
+    debug_print("validating output filters...")
 
     debug_print("checking if any output filters are empty...", indent=1)
     for header in filters_section:
