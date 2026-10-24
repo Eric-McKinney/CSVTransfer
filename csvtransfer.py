@@ -40,7 +40,12 @@ def main():
     validate_output_filters(config, output_columns)
 
 
+    output_df = pd.DataFrame()
+    output_df = read_and_transfer_data_to_output(config, output_df, output_columns)
 
+    # TODO: mark rows that don't pass output filters
+
+    write_output_data(config, output_df)
 
 
 def debug_print(msg: str, indent: int = 0) -> None:
@@ -109,14 +114,14 @@ def key_exists(config: Dict[str,Dict[str,str]], section_name: str, key: str,
 
 
 def validate_output_dialect(config: Dict[str,Dict[str,str]]) -> str:
-    valid_dialects = {"excel", "excel_tab", "unix"}
+    valid_dialects = {"csv", "excel"}
     output_dialect = None
 
     if "output" in config and "dialect" in config["output"]:
         output_dialect = config["output"]["dialect"]
 
     if output_dialect not in [None, ""] and output_dialect not in valid_dialects:
-        return f"error: {output_dialect} is not a valid output dialect (excel, excel_tab, unix)\n"
+        return f"error: {output_dialect} is not a valid output dialect (csv, excel)\n"
 
     return ""
 
@@ -259,6 +264,85 @@ def set_default_configurations(config: Dict[str,Dict[str,Any]]) -> None:
                 debug_print(f"{key} empty/missing in {source} section, applying "
                             f"default value {default_key}", indent=1)
                 config[source][key] = default_key
+
+
+def read_and_transfer_data_to_output(config: Dict[str,Dict[str,Any]],
+                                     output_df: pd.DataFrame,
+                                     output_columns: List[str]) -> pd.DataFrame:
+    debug_print("collecting source data into output data...")
+    for source_name in config["sources"]:
+        source_df = read_source(config, source_name)
+
+        debug_print("renaming columns according to mappings in config...", indent=1)
+        mappings = config[f"{source_name}_column_remapping"]
+        source_df.rename(columns=mappings, inplace=True)
+
+        # need to rename join_by_columns to join data now that the columns are renamed
+        remap_col = lambda col: remap_column(config, source_name, col)
+        join_by_cols = config[source_name]["join_by_columns"]
+        config[source_name]["join_by_columns"] = list(map(remap_col, join_by_cols))
+
+        output_df = join_data_to_output(config, source_name, source_df, output_df)
+
+    return output_df
+
+
+def read_source(config: Dict[str,Dict[str,Any]], source_name: str) -> pd.DataFrame:
+    debug_print(f"reading source {source_name}'s data...", indent=1)
+    source_section = config[source_name]
+    csv_file = config["sources"][source_name]
+
+    source_df = pd.read_csv(csv_file,
+                            header=source_section["header_row_num"],
+                            usecols=source_section["target_columns"],
+                            skiprows=source_section["ignore_rows"])
+
+    debug_print(f"dumping source {source_name}'s data...", indent=1)
+    debug_print(source_df)
+    return source_df
+
+
+def join_data_to_output(config: Dict[str,Dict[str,Any]], source_name: str,
+                        source_df: pd.DataFrame,
+                        output_df: pd.DataFrame) -> pd.DataFrame:
+    debug_print(f"joining source {source_name}'s data with output data...", indent=1)
+
+    join_by_cols = config[source_name]["join_by_columns"]
+    for col in join_by_cols:
+        if col not in output_df:
+            output_df[col] = []
+
+    output_df = output_df.merge(source_df, how="outer", on=join_by_cols,
+                                suffixes=(None, f"_{source_name}"))
+
+    debug_print(f"finished merging {source_name}, dumping output data...", indent=1)
+    debug_print(output_df)
+    return output_df
+
+
+def add_file_extension_if_missing(file_name: str, extension: str) -> str:
+    if not file_name.endswith(extension):
+        print(f"warning: adding {extension} file extension to output file",
+              file=sys.stderr)
+        return file_name + extension
+
+    return file_name
+
+
+def write_output_data(config: Dict[str,Dict[str,Any]], output_df: pd.DataFrame) -> None:
+    dialect = config["output"]["dialect"]
+    out_file = config["output"]["file_name"]
+
+    file_extension = ".xlsx" if dialect == "excel" else ".csv"
+    out_file = add_file_extension_if_missing(out_file, file_extension)
+
+    match dialect:
+        case "csv":
+            output_df.to_csv(out_file)
+        case "excel":
+            output_df.to_excel(out_file)
+        case _:
+            raise SystemExit(f"error: unrecognized output dialect {dialect}")
 
 
 if __name__ == "__main__":
