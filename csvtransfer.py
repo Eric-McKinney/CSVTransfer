@@ -31,11 +31,16 @@ def main():
 
     config = parse_config(args.config_file_path)
     validate_config(config)
-    output_columns = get_output_columns(config)
-    validate_output_filters(config, output_columns)
 
     if "defaults" in config:
         set_default_configurations(config)
+
+    parse_source_config_fields(config)
+    output_columns = get_output_columns(config)
+    validate_output_filters(config, output_columns)
+
+
+
 
 
 def debug_print(msg: str, indent: int = 0) -> None:
@@ -44,17 +49,7 @@ def debug_print(msg: str, indent: int = 0) -> None:
         print(msg, file=sys.stderr)
 
 
-def dump_config(config: cfg.ConfigParser) -> None:
-    config_dict = dict(config)
-    config_dict.pop("DEFAULT")  # added by configparser
-
-    for section_name, section in config_dict.items():
-        config_dict[section_name] = dict(section)
-
-    pprint.pp(config_dict, stream=sys.stderr)
-
-
-def parse_config(config_file_path: str) -> cfg.ConfigParser:
+def parse_config(config_file_path: str) -> Dict[str,Dict[str,str]]:
     debug_print(f"finding configuration file {config_file_path}...")
 
     if not os.path.exists(os.path.join(os.getcwd(), config_file_path)):
@@ -66,14 +61,20 @@ def parse_config(config_file_path: str) -> cfg.ConfigParser:
     config.optionxform = str
     config.read(config_file_path)
 
+    # ConfigParser object is somewhat restrictive, so convert to dictionary
+    config = dict(config)
+    config.pop("DEFAULT")  # added by configparser, not going to use so remove it
+    for section_name, section in config.items():
+        config[section_name] = dict(section)
+
     debug_print("dumping parsed configuration...")
     if DEBUG:
-        dump_config(config)
+        pprint.pp(config, stream=sys.stderr)
 
     return config
 
 
-def section_exists(config: cfg.ConfigParser, section_name: str) -> str:
+def section_exists(config: Dict[str,Dict[str,str]], section_name: str) -> str:
     if section_name not in config:
         return f"error: {section_name} section missing from config file\n"
 
@@ -92,7 +93,8 @@ def source_csv_exists(source_file: str) -> str:
     return ""
 
 
-def key_exists(config: cfg.ConfigParser, section_name: str, key: str, use_default=True) -> str:
+def key_exists(config: Dict[str,Dict[str,str]], section_name: str, key: str,
+               use_default=True) -> str:
     default_exists = ("defaults" in config
                  and key in config["defaults"]
                  and config["defaults"][key] not in [None, ""])
@@ -106,7 +108,7 @@ def key_exists(config: cfg.ConfigParser, section_name: str, key: str, use_defaul
     return ""
 
 
-def validate_output_dialect(config: cfg.ConfigParser) -> str:
+def validate_output_dialect(config: Dict[str,Dict[str,str]]) -> str:
     valid_dialects = {"excel", "excel_tab", "unix"}
     output_dialect = None
 
@@ -119,7 +121,7 @@ def validate_output_dialect(config: cfg.ConfigParser) -> str:
     return ""
 
 
-def validate_config(config: cfg.ConfigParser) -> None:
+def validate_config(config: Dict[str,Dict[str,str]]) -> None:
     error_msg = ""
     debug_print("validating configuration (error & warning messages printed after)...")
 
@@ -165,7 +167,21 @@ def validate_config(config: cfg.ConfigParser) -> None:
         raise SystemExit(error_msg.rstrip())
 
 
-def remap_column(config: cfg.ConfigParser, source_name: str, header: str) -> str:
+def parse_source_config_fields(config: Dict[str,Dict[str,str]]) -> None:
+    # extra parsing to get source config fields into more useful data types
+    for source_name in config["sources"]:
+        source = config[source_name]
+        source["target_columns"] = source["target_columns"].split(",")
+
+        if "join_by_columns" not in source:
+            source_configs["join_by_columns"] = ""
+
+        source["join_by_columns"] = source["join_by_columns"].split(",")
+        source["header_row_num"] = int(source["header_row_num"])
+        source["ignore_rows"] = list(map(int, source["ignore_rows"].split(",")))
+
+
+def remap_column(config: Dict[str,Dict[str,Any]], source_name: str, header: str) -> str:
     remapping_section_name = f"{source_name}_column_remapping"
     if remapping_section_name not in config:
         return header
@@ -179,18 +195,18 @@ def remap_column(config: cfg.ConfigParser, source_name: str, header: str) -> str
     return remapping_section[header]
 
 
-def get_output_columns(config: cfg.ConfigParser) -> List[str]:
+def get_output_columns(config: Dict[str,Dict[str,Any]]) -> List[str]:
     join_cols: Set[str] = set()
     data_cols: Set[str] = set()
     debug_print("getting full list of output columns...")
 
     for source_name in config["sources"]:
         debug_print(f"getting columns from source {source_name}...", indent=1)
-        tcols = config[source_name]["target_columns"].split(",")
+        tcols = config[source_name]["target_columns"]
         remap_col = lambda col: remap_column(config, source_name, col)
 
         if "join_by_columns" in config[source_name]:
-            join_by = config[source_name]["join_by_columns"].split(",")
+            join_by = config[source_name]["join_by_columns"]
             tcols = list(filter(lambda x: x not in join_by, tcols))
             join_cols |= set(map(remap_col, join_by))
 
@@ -207,9 +223,10 @@ def get_output_columns(config: cfg.ConfigParser) -> List[str]:
     return output_columns
 
 
-def validate_output_filters(config: cfg.ConfigParser, output_columns: List[str]) -> None:
+def validate_output_filters(config: Dict[str,Dict[str,Any]],
+                            output_columns: List[str]) -> None:
     warn_msg = ""
-    filters_section = config["output_filters"] if "output_filters" in config else dict()
+    filters_section = config.get("output_filters", dict())
     debug_print("validating output filters...")
 
     debug_print("checking if any output filters are empty...", indent=1)
@@ -228,7 +245,7 @@ def validate_output_filters(config: cfg.ConfigParser, output_columns: List[str])
         print(warn_msg.rstrip(), file=sys.stderr)
 
 
-def set_default_configurations(config: cfg.ConfigParser) -> None:
+def set_default_configurations(config: Dict[str,Dict[str,Any]]) -> None:
     debug_print("setting default values in configuration...")
     for source in config["sources"]:
         for key in config["defaults"]:
