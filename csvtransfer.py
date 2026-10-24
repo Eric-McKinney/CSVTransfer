@@ -3,6 +3,7 @@ import configparser as cfg
 import os
 import pandas as pd
 import pprint
+import re
 import sys
 
 
@@ -42,9 +43,7 @@ def main():
 
     output_df = pd.DataFrame()
     output_df = read_and_transfer_data_to_output(config, output_df, output_columns)
-
-    # TODO: mark rows that don't pass output filters
-
+    apply_output_filters(config["output_filters"], output_df)
     write_output_data(config, output_df)
 
 
@@ -318,6 +317,20 @@ def join_data_to_output(config: Dict[str,Dict[str,Any]], source_name: str,
     debug_print(f"finished merging {source_name}, dumping output data...", indent=1)
     debug_print(output_df)
     return output_df
+
+
+def passes_filters(filters: Dict[str,str], row: pd.Series) -> bool:
+    for column, regex in filters.items():
+        data = str(row[column])
+        if re.search(pattern=regex, string=data) is None:
+            return False
+
+    return True
+
+
+def apply_output_filters(filters: Dict[str,str], output_df: pd.DataFrame) -> None:
+    filter_results = output_df.apply(lambda x: passes_filters(filters, x), axis=1)
+    output_df.insert(0, "passed output filters", filter_results)
 
 
 def add_file_extension_if_missing(file_name: str, extension: str) -> str:
