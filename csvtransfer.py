@@ -184,8 +184,9 @@ def parse_source_config_fields(config: Dict[str,Dict[str,str]]) -> None:
         source = config[source_name]
         source["target_columns"] = source["target_columns"].split(",")
 
-        if "join_by_columns" not in source:
-            source_configs["join_by_columns"] = ""
+        for optional_col in ["ignore_rows", "join_by_columns"]:
+            if optional_col not in source:
+                source[optional_col] = ""
 
         source["join_by_columns"] = source["join_by_columns"].split(",")
         source["header_row_num"] = int(source["header_row_num"])
