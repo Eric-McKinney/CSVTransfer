@@ -24,8 +24,6 @@ def main():
                         help="the path to the configuration file")
     parser.add_argument("--debug", action="store_true",
                         help="enables diagnostic messages")
-    parser.add_argument("--strict", action="store_true",
-                        help="joins work like unions (i.e. an inner join)")
 
     args = parser.parse_args(sys.argv[1:])
 
