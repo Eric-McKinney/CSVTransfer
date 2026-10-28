@@ -221,6 +221,9 @@ def get_output_columns(config: Dict[str,Dict[str,Any]]) -> List[str]:
     join_cols.sort()
     data_cols.sort()
 
+    source_tracking_cols = [f"from {source_name}" for source_name in config["sources"]]
+    data_cols.extend(source_tracking_cols)
+
     # put columns being used to join data at the front
     output_columns = join_cols + data_cols
     debug_print(f"output columns: {output_columns}", indent=1)
@@ -283,6 +286,15 @@ def read_and_transfer_data_to_output(config: Dict[str,Dict[str,Any]],
 
         output_df = join_data_to_output(config, source_name, source_df, output_df)
 
+    debug_print("filling N/A values in source tracking columns...")
+    for source_name in config["sources"]:
+        col = f"from {source_name}"
+        output_df[col] = output_df[col].fillna(False)
+
+    output_df = output_df[output_columns]  # ensures columns are in correct order
+    debug_print("dumping output data...")
+    debug_print(output_df)
+
     return output_df
 
 
@@ -311,8 +323,15 @@ def join_data_to_output(config: Dict[str,Dict[str,Any]], source_name: str,
         if col not in output_df:
             output_df[col] = []
 
+    source_tracking_col = f"from {source_name}"
     output_df = output_df.merge(source_df, how="outer", on=join_by_cols,
-                                suffixes=(None, f"_{source_name}"))
+                                suffixes=(None, f"_{source_name}"),
+                                indicator=source_tracking_col)
+
+    from_source_series = output_df[source_tracking_col].astype("string")
+    from_source_series.replace({"right_only": True, "left_only": False, "both": True},
+                               inplace=True)
+    output_df[source_tracking_col] = from_source_series
 
     debug_print(f"finished merging {source_name}, dumping output data...", indent=1)
     debug_print(output_df)
