@@ -8,6 +8,8 @@ import sys
 
 
 DEBUG = False
+SEP = "=" * 80
+MINOR_SEP = "-" * 80
 
 
 def main():
@@ -31,26 +33,33 @@ def main():
     DEBUG = args.debug
 
     config = parse_config(args.config_file_path)
+    debug_print(SEP)
     validate_config(config)
+    debug_print(SEP)
 
     if "defaults" in config:
         set_default_configurations(config)
+        debug_print(SEP)
 
     parse_source_config_fields(config)
     output_columns = get_output_columns(config)
+    debug_print(SEP)
     validate_output_filters(config, output_columns)
+    debug_print(SEP)
 
 
     output_df = pd.DataFrame()
     output_df = read_and_transfer_data_to_output(config, output_df, output_columns)
+    debug_print(SEP)
     apply_output_filters(config["output_filters"], output_df)
+    debug_print(SEP)
     write_output_data(config, output_df)
 
 
-def debug_print(msg: str, indent: int = 0) -> None:
+def debug_print(msg: str, indent: int = 0, end: str = "\n") -> None:
     if DEBUG:
         print("  " * indent, file=sys.stderr, end="")
-        print(msg, file=sys.stderr)
+        print(msg, file=sys.stderr, end=end)
 
 
 def parse_config(config_file_path: str) -> Dict[str,Dict[str,str]]:
@@ -285,6 +294,7 @@ def read_and_transfer_data_to_output(config: Dict[str,Dict[str,Any]],
         config[source_name]["join_by_columns"] = list(map(remap_col, join_by_cols))
 
         output_df = join_data_to_output(config, source_name, source_df, output_df)
+        debug_print(MINOR_SEP)
 
     debug_print("filling N/A values in source tracking columns...")
     for source_name in config["sources"]:
@@ -339,15 +349,36 @@ def join_data_to_output(config: Dict[str,Dict[str,Any]], source_name: str,
 
 
 def passes_filters(filters: Dict[str,str], row: pd.Series) -> bool:
+    debug_print(f"checking row {row.name}...", indent=1)
+    debug_print(f"dumping row...", indent=2)
+    debug_print(row)
+
     for column, regex in filters.items():
-        data = str(row[column])
-        if re.search(pattern=regex, string=data) is None:
+        data = row[column]
+        debug_print(f"checking filter {regex} for {column} {data}...",
+                    indent=2, end="")
+
+        if pd.isna(data):
+            debug_print("did not pass (data missing)")
+            debug_print("row did not pass all output filters (marked False)", indent=2)
+            debug_print(MINOR_SEP)
             return False
 
+        if re.search(pattern=regex, string=str(data)) is None:
+            debug_print("did not pass")
+            debug_print("row did not pass all output filters (marked False)", indent=2)
+            debug_print(MINOR_SEP)
+            return False
+
+        debug_print("passed")
+
+    debug_print("row passed all output filters (marked True)", indent=2)
+    debug_print(MINOR_SEP)
     return True
 
 
 def apply_output_filters(filters: Dict[str,str], output_df: pd.DataFrame) -> None:
+    debug_print("checking if each row passes output filters...")
     filter_results = output_df.apply(lambda x: passes_filters(filters, x), axis=1)
     output_df.insert(0, "passed output filters", filter_results)
 
