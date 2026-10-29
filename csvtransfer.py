@@ -42,15 +42,19 @@ def main():
     parse_source_config_fields(config)
     output_columns = get_output_columns(config)
     debug_print(SEP)
-    validate_output_filters(config, output_columns)
-    debug_print(SEP)
 
+    if "output_filters" in config:
+        validate_output_filters(config, output_columns)
+        debug_print(SEP)
 
     output_df = pd.DataFrame()
     output_df = read_and_transfer_data_to_output(config, output_df, output_columns)
     debug_print(SEP)
-    apply_output_filters(config["output_filters"], output_df)
-    debug_print(SEP)
+
+    if "output_filters" in config:
+        apply_output_filters(config["output_filters"], output_df)
+        debug_print(SEP)
+
     write_output_data(config, output_df)
 
 
@@ -241,17 +245,16 @@ def get_output_columns(config: Dict[str,Dict[str,Any]]) -> List[str]:
 def validate_output_filters(config: Dict[str,Dict[str,Any]],
                             output_columns: List[str]) -> None:
     warn_msg = ""
-    filters_section = config.get("output_filters", dict())
     debug_print("validating output filters...")
 
     debug_print("checking if any output filters are empty...", indent=1)
-    for header in filters_section:
+    for header in config["output_filters"]:
         rule = config["output_filters"][header]
         if rule in [None, ""]:
             warn_msg += f"warning: output filter for {header} is empty\n"
 
     debug_print("checking if any filters apply to columns not in output...", indent=1)
-    for header in filters_section:
+    for header in config["output_filters"]:
         if header not in output_columns:
             warn_msg += f"warning: output filter for {header} column when no " \
                         f"{header} column exists in output\n"
