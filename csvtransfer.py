@@ -386,6 +386,7 @@ def apply_output_filters(filters: Dict[str,str], output_df: pd.DataFrame) -> Non
 
 
 def add_file_extension_if_missing(file_name: str, extension: str) -> str:
+    debug_print("checking if file extension matches dialect...", indent=1)
     if not file_name.endswith(extension):
         print(f"warning: adding {extension} file extension to output file",
               file=sys.stderr)
@@ -397,6 +398,7 @@ def add_file_extension_if_missing(file_name: str, extension: str) -> str:
 def write_output_data(config: Dict[str,Dict[str,Any]], output_df: pd.DataFrame) -> None:
     dialect = config["output"]["dialect"]
     out_file = config["output"]["file_name"]
+    debug_print(f"writing output data to {out_file}...")
 
     file_extension = ".xlsx" if dialect == "excel" else ".csv"
     out_file = add_file_extension_if_missing(out_file, file_extension)
