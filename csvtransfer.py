@@ -185,6 +185,13 @@ def validate_config(config: Dict[str,Dict[str,str]]) -> None:
         raise SystemExit(error_msg.rstrip())
 
 
+def split_by_commas(xs: str) -> List[str]:
+    if xs == "":
+        return []
+
+    return xs.split(",")
+
+
 def parse_source_config_fields(config: Dict[str,Dict[str,str]]) -> None:
     # extra parsing to get source config fields into more useful data types
     for source_name in config["sources"]:
@@ -195,9 +202,9 @@ def parse_source_config_fields(config: Dict[str,Dict[str,str]]) -> None:
             if optional_col not in source:
                 source[optional_col] = ""
 
-        source["join_by_columns"] = source["join_by_columns"].split(",")
+        source["join_by_columns"] = split_by_commas(source["join_by_columns"])
         source["header_row_num"] = int(source["header_row_num"])
-        source["ignore_rows"] = list(map(int, source["ignore_rows"].split(",")))
+        source["ignore_rows"] = list(map(int, split_by_commas(source["ignore_rows"])))
 
 
 def remap_column(config: Dict[str,Dict[str,Any]], source_name: str, header: str) -> str:
