@@ -16,12 +16,16 @@ def main():
     parser = argparse.ArgumentParser(
             prog="csvtransfer",
             description="Transfer, filter, and consolidate data from an \
-                    arbitrary number of csv files.",
+                    arbitrary number of csv files. Outputs results to \
+                    output.csv or output.xlsx by default based on the output \
+                    dialect.",
             epilog="See the README for more info \
                     <https://github.com/Eric-McKinney/CSVTransfer/blob/main/README.md>")
     
     parser.add_argument("config_file_path", metavar="CONFIG_FILE",
                         help="the path to the configuration file")
+    parser.add_argument("-o", "--outfile", metavar="OUTPUT_FILE",
+                        help="specify output file name")
     parser.add_argument("--debug", action="store_true",
                         help="enables diagnostic messages")
 
@@ -55,7 +59,7 @@ def main():
         apply_output_filters(config["output_filters"], output_df)
         debug_print(SEP)
 
-    write_output_data(config, output_df)
+    write_output_data(config, args.outfile, output_df)
 
 
 def debug_print(msg: str, indent: int = 0, end: str = "\n") -> None:
@@ -171,8 +175,7 @@ def validate_config(config: Dict[str,Dict[str,str]]) -> None:
                              f"source {source_name}\n"
 
     debug_print("checking if required values are in output section...", indent=1)
-    for required_key in ["file_name", "dialect"]:
-        error_msg += key_exists(config, "output", required_key, use_default=False)
+    error_msg += key_exists(config, "output", "dialect", use_default=False)
 
     debug_print("checking if output dialect is valid...", indent=1)
     error_msg += validate_output_dialect(config)
@@ -395,19 +398,23 @@ def add_file_extension_if_missing(file_name: str, extension: str) -> str:
     return file_name
 
 
-def write_output_data(config: Dict[str,Dict[str,Any]], output_df: pd.DataFrame) -> None:
+def write_output_data(config: Dict[str,Dict[str,Any]], file_name: str,
+                      output_df: pd.DataFrame) -> None:
     dialect = config["output"]["dialect"]
-    out_file = config["output"]["file_name"]
-    debug_print(f"writing output data to {out_file}...")
+    debug_print(f"writing output data to {file_name}...")
 
     file_extension = ".xlsx" if dialect == "excel" else ".csv"
-    out_file = add_file_extension_if_missing(out_file, file_extension)
+
+    if file_name is None:
+        file_name = "output" + file_extension
+    else:
+        file_name = add_file_extension_if_missing(file_name, file_extension)
 
     match dialect:
         case "csv":
-            output_df.to_csv(out_file)
+            output_df.to_csv(file_name)
         case "excel":
-            output_df.to_excel(out_file)
+            output_df.to_excel(file_name)
         case _:
             raise SystemExit(f"error: unrecognized output dialect {dialect}")
 
