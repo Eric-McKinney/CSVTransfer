@@ -340,6 +340,7 @@ def join_data_to_output(config: Dict[str,Dict[str,Any]], source_name: str,
                         output_df: pd.DataFrame) -> pd.DataFrame:
     debug_print(f"joining source {source_name}'s data with output data...", indent=1)
 
+    # join_by_cols need to be in both dataframes to "merge on"
     join_by_cols = config[source_name]["join_by_columns"]
     for col in join_by_cols:
         if col not in output_df:
