@@ -8,7 +8,7 @@ arbitrary number of csv files into a single csv file.
 Download `csvtransfer.py`, `config_template.ini`, and optionally this `README.md` for
 future reference. Next, make sure you have python 3 installed. Finally, you
 need to fill out the config template as described further down in this README.
-Alternatively, download and run the script `config_gen.py` from this repo to
+Alternatively, download and run the script `config_gen.sh` from this repo to
 interactively create a config file without worrying too much about the syntax.
 
 ## Usage
@@ -16,7 +16,7 @@ interactively create a config file without worrying too much about the syntax.
 Run the script by passing the path to your configuration file as the only argument.
 
 ```bash
-python3 csvtransfer.py CONFIG_FILE
+python3 csvtransfer.py [OPTION...] CONFIG_FILE
 ```
 
 > [!NOTE]
@@ -32,7 +32,7 @@ python3 csvtransfer.py CONFIG_FILE
 
 **-o, --outfile OUTPUT_FILE**
 > Specify a name for the output file instead of the default output.csv or
-> output.xlsx
+> output.xlsx (depending on output dialect in config file)
 
 ## Config File
 
@@ -46,9 +46,9 @@ which this script uses to parse the config file.
 
 ## Config File Generator
 
-To make creating config files quicker and more intuitive, use the config file
-generator script available in this repo. It will fill out the config file for
-you through a series of interactive prompts.
+To make creating config files quicker and more intuitive, use the [config file
+generator script](config_gen.sh) available in this repo. It will fill out the
+config file for you through a series of interactive prompts.
 
 ## Config File Sections
 
