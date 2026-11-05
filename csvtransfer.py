@@ -328,7 +328,8 @@ def read_source(config: Dict[str,Dict[str,Any]], source_name: str) -> pd.DataFra
     source_df = pd.read_csv(csv_file,
                             header=source_section["header_row_num"],
                             usecols=source_section["target_columns"],
-                            skiprows=source_section["ignore_rows"])
+                            skiprows=source_section["ignore_rows"],
+                            sep=source_section["separator"])
 
     debug_print(f"dumping source {source_name}'s data...", indent=1)
     debug_print(source_df)

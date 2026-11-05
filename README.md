@@ -65,15 +65,17 @@ source's section unless they already exist in that section.
 ```ini
 [defaults]
 header_row_num = 0
+separator = ,
 ```
 
 Above is the defaults section included in the config template. It sets the
-default value of 0 for the header_row_num in each source's section. For most
-sources, the headers (column names) are in the first line/row of the file (line
-0), so it makes a lot of sense as a default value. The header_row_num key is
-required for each source's section, but since it is given a default value it
-does not have to appear in any source's section unless of course the value
-needs to be overridden.
+default value of 0 for the header_row_num and "," as the separator in each
+source's section. For most sources, the headers (column names) are in the first
+line/row of the file (line 0) and the most common separator is a comma, so they
+make a lot of sense as default values. Both keys are required for every
+source's section, but since they are given as default values in this example,
+they do not have to appear in any source's section unless either of the values
+need to be overridden for a particular source.
 
 ### sources section (required)
 
@@ -106,6 +108,10 @@ it appears there. This section has the following fields:
 > The number of the row (starting at 0) which contains the headers (column
 > names) to use
 
+**separator** (required)
+> The character used to separate values in the data (usually a comma, but not
+> always)
+
 **target_columns** (required)
 > A comma separated list of the headers to pull data from
 
@@ -120,6 +126,7 @@ it appears there. This section has the following fields:
 ```ini
 [source1_name]
 header_row_num = 1
+separator = ;
 target_columns = id,name,email
 join_by_columns = id,email
 ignore_rows = 4,7
@@ -197,6 +204,7 @@ following happens:
 ```ini
 [defaults]
 header_row_num = 0
+separator = ,
 
 [sources]
 source1 = example_files/example.csv

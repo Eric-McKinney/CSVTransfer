@@ -22,6 +22,7 @@ write_config() {
     cat > "$outfile" <<-HEREDOC
 	[defaults]
 	header_row_num = 0
+	separator = ,
 
 	[sources]
 	$(printf "$sources_section")
@@ -138,6 +139,9 @@ do
     [[ "$sheader_rownum" =~ ^[[:digit:]]+$ ]] || err --fatal "must be a digit"
     [[ "$sheader_rownum" -ne 0 ]] \
         && individual_source_sections+="header_row_num = $sheader_rownum\n"
+
+    fancy_read "separator used in csv file: " ssep
+    [[ "$ssep" != "," ]] && individual_source_sections+="separator = $ssep\n"
 
     declare -a starget_cols=()
     sremappings="[${sname}_column_remapping]\n"
