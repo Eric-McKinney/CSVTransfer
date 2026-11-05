@@ -62,17 +62,13 @@ read_target_cols() {
     local -n tcols="$1"
     local -n remappings="$2"
 
-    # TODO: make this nicer to look at and easier to read
-    echo "provide the names of the columns to transfer data from one at a time"
-    echo "leave the target column name empty and hit enter to move on to the next prompt"
-
     local i=0
     local col=""
     local outcol=""
 
     while :
     do
-        fancy_read "target column $((i+1)): " col
+        fancy_read "target column $((i+1)) (leave blank to move on): " col
         [[ "$col" == "" ]] && break
         fancy_read "rename column $col for output data (leave blank to keep the same): " outcol
 
@@ -86,18 +82,17 @@ choose_join_by_cols() {
     local -n tcols="$1"
     local -n join_by_cols="$2"
 
-    echo "choose any number of target columns to join data together by:"
+    echo "choose target columns to join data together by (leave blank if none):"
     local i
     for ((i = 1; i <= ${#tcols[@]}; i++))
     do
         printf "$PROMPT_COLOR[%d]$COLOR_END %s\n" "$i" "${tcols[$((i-1))]}"
     done
 
-    local choice
-    while :
+    local choices
+    fancy_read "pick numbers from above (separate with spaces): " choices
+    for choice in $choices
     do
-        fancy_read "pick a number from above (leave empty to move on): " choice
-        [[ "$choice" == "" ]] && break
         join_by_cols+="${tcols[$((choice - 1))]},"
     done
     
@@ -160,5 +155,12 @@ do
         column_remapping_sections+="$sremappings\n"
 done
 
-fancy_read "output dialect (csv or excel): " dialect
+dialects=("csv" "excel")
+echo "choose an output dialect"
+printf "$PROMPT_COLOR[1]$END_COLOR csv\n"
+printf "$PROMPT_COLOR[2]$END_COLOR excel\n"
+fancy_read "pick a number from above: " dialect_choice
+[[ "$dialect_choice" =~ ^1|2$ ]] || dialect_choice=1
+dialect="${dialects[$((dialect_choice-1))]}"
+
 write_config
