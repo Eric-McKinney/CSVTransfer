@@ -236,7 +236,11 @@ def get_output_columns(config: Dict[str,Dict[str,Any]]) -> List[str]:
             tcols = list(filter(lambda x: x not in join_by, tcols))
             join_cols |= set(map(remap_col, join_by))
 
-        data_cols |= set(map(remap_col, tcols))
+        remapped_tcols = set(map(remap_col, tcols))
+        # duplicate cols not being joined on have source name appended by pandas merge
+        duplicate_tcols = data_cols & remapped_tcols
+        duplicate_tcols = set(map(lambda col: col + f"_{source_name}", duplicate_tcols))
+        data_cols |= remapped_tcols | duplicate_tcols
 
     join_cols = list(join_cols)
     data_cols = list(data_cols)
