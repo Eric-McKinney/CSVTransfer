@@ -366,39 +366,42 @@ def join_data_to_output(config: Dict[str,Dict[str,Any]], source_name: str,
     return output_df
 
 
-def passes_filters(filters: Dict[str,str], row: pd.Series) -> bool:
+def check_filters(filters: Dict[str,str], row: pd.Series) -> str:
     debug_print(f"checking row {row.name}...", indent=1)
     debug_print(f"dumping row...", indent=2)
     debug_print(row)
 
+    filters_not_matched = ""
     for column, regex in filters.items():
+        if column not in row:
+            debug_print(f"skipping filter for {column} (not in row)", indent=2)
+            continue
+
         data = row[column]
         debug_print(f"checking filter {regex} for {column} {data}...",
                     indent=2, end="")
 
         if pd.isna(data):
-            debug_print("did not pass (data missing)")
-            debug_print("row did not pass all output filters (marked False)", indent=2)
-            debug_print(MINOR_SEP)
-            return False
+            debug_print("did not match (data missing)")
+            filters_not_matched += column + ", "
+        elif re.search(pattern=regex, string=str(data)) is None:
+            debug_print("did not match")
+            filters_not_matched += column + ", "
+        else:
+            debug_print("matched")
 
-        if re.search(pattern=regex, string=str(data)) is None:
-            debug_print("did not pass")
-            debug_print("row did not pass all output filters (marked False)", indent=2)
-            debug_print(MINOR_SEP)
-            return False
+    # remove trailing ", " if exists (no effect on empty string)
+    filters_not_matched = filters_not_matched[:-2]
 
-        debug_print("passed")
-
-    debug_print("row passed all output filters (marked True)", indent=2)
+    debug_print(f"filters not matched for columns: {filters_not_matched}")
     debug_print(MINOR_SEP)
-    return True
+    return filters_not_matched
 
 
 def apply_output_filters(filters: Dict[str,str], output_df: pd.DataFrame) -> None:
     debug_print("checking if each row passes output filters...")
-    filter_results = output_df.apply(lambda x: passes_filters(filters, x), axis=1)
-    output_df.insert(0, "passed output filters", filter_results)
+    filter_results = output_df.apply(lambda x: check_filters(filters, x), axis=1)
+    output_df.insert(0, "columns flagged by output filters", filter_results)
 
 
 def add_file_extension_if_missing(file_name: str, extension: str) -> str:
