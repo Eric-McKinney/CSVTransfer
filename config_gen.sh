@@ -33,6 +33,8 @@ write_config() {
 
 	[output]
 	dialect = $dialect
+
+	$(printf "$output_filters")
 	HEREDOC
 }
 
@@ -166,5 +168,16 @@ printf "$PROMPT_COLOR[2]$END_COLOR excel\n"
 fancy_read "pick a number from above: " dialect_choice
 [[ "$dialect_choice" =~ ^1|2$ ]] || dialect_choice=1
 dialect="${dialects[$((dialect_choice-1))]}"
+
+output_filters="[output_filters]\n"
+echo "optionally provide regex to validate data by column (flag data that doesn't match)"
+while :
+do
+    fancy_read "column name as it would appear in the output (leave blank to skip): " ofcname
+    [[ "$ofcname" == "" ]] && break
+    fancy_read "regex for column $ofcname: " ofregex
+
+    output_filters+="$ofcname = $ofregex\n"
+done
 
 write_config
