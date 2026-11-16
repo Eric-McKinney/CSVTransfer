@@ -49,6 +49,7 @@ def main():
 
     if "output_filters" in config:
         validate_output_filters(config, output_columns)
+        add_duplicate_filters(config, output_columns)
         debug_print(SEP)
 
     output_df = pd.DataFrame()
@@ -279,6 +280,23 @@ def validate_output_filters(config: Dict[str,Dict[str,Any]],
 
     if warn_msg != "":
         print(warn_msg.rstrip(), file=sys.stderr)
+
+
+def add_duplicate_filters(config: Dict[str, Dict[str,Any]],
+                          output_columns: List[str]) -> None:
+    debug_print("adding output filters for duplicated column names...")
+    duplicate_filters = {}
+    for column_name, regex in config["output_filters"].items():
+        for source_name in config["sources"]:
+            dupe_name = f"{column_name}_{source_name}"
+            if dupe_name in output_columns and dupe_name not in config["output_filters"]:
+                debug_print(f"found {dupe_name}, adding filter {regex} from {column_name}", indent=1)
+                duplicate_filters[dupe_name] = regex
+
+    config["output_filters"].update(duplicate_filters)
+    debug_print("dumping updated output filters...")
+    if DEBUG:
+        pprint.pp(config["output_filters"], stream=sys.stderr)
 
 
 def set_default_configurations(config: Dict[str,Dict[str,Any]]) -> None:
