@@ -403,10 +403,11 @@ def check_filters(filters: Dict[str,str], row: pd.Series) -> str:
         debug_print(f"checking filter {regex} for {column} {data}...",
                     indent=2, end="")
 
+        # missing data will be turned into a string "nan" otherwise
         if pd.isna(data):
-            debug_print("did not match (data missing)")
-            filters_not_matched += column + ", "
-        elif re.search(pattern=regex, string=str(data)) is None:
+            data = ""
+
+        if re.search(pattern=regex, string=str(data)) is None:
             debug_print("did not match")
             filters_not_matched += column + ", "
         else:
