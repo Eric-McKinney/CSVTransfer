@@ -206,6 +206,10 @@ def parse_source_config_fields(config: Dict[str,Dict[str,str]]) -> None:
         source["header_row_num"] = int(source["header_row_num"])
         source["ignore_rows"] = list(map(int, split_by_commas(source["ignore_rows"])))
 
+        remapping_section = f"{source_name}_column_remapping"
+        if remapping_section not in config:
+            config[remapping_section] = {}
+
 
 def remap_column(config: Dict[str,Dict[str,Any]], source_name: str, header: str) -> str:
     remapping_section_name = f"{source_name}_column_remapping"
