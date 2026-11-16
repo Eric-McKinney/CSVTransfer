@@ -170,14 +170,21 @@ If included, the output_filters section contains regular expressions to
 validate data. Each key in this section should correspond to a header (column
 name) in the output. The value for each key should be a regular expression
 which encompasses valid data for that row. If this section is present in the
-config file, a column will be added to the output which says if each row passed
-every filter or not.
+config file, a column will be added to the output which says which filters
+didn't match if any failed.
 
 ```ini
 [output_filters]
 email = ^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.(com|net|org)$
 id = ^[0-9]{6,}$
 ```
+
+If two or more target columns from different sources share the same name and
+aren't being used to join data then every one after the first will have its
+source name appended to the column name. In this case, if there is an output
+filter for the original column name, it will also be applied to the duplicate
+columns even though their name is different in the output. That is unless an
+output filter already exists for the new column name (e.g. `id_source1 = ^4`).
 
 ## How data is joined together
 
