@@ -168,13 +168,13 @@ def validate_config(config: Dict[str, Dict[str, str]]) -> None:
     debug_print("checking if each source's join_by_columns are present in target_columns...",
                 indent=1)
     for source_name in sources_section:
-        target_cols = config[source_name].get("target_columns", "").split(",")
-        join_cols = config[source_name].get("join_by_columns", "").split(",")
+        target_cols = set(config[source_name].get("target_columns", "").split(","))
+        join_cols = set(config[source_name].get("join_by_columns", "").split(","))
 
-        for col in join_cols:
-            if col not in target_cols:
-                error_msg += f"error: joining column {col} is not a target column for " \
-                             f"source {source_name}\n"
+        diff = join_cols - target_cols
+        for col in diff:
+            error_msg += f"error: joining column {col} is not a target column for " \
+                         f"source {source_name}\n"
 
     debug_print("checking if required values are in output section...", indent=1)
     error_msg += key_exists(config, "output", "dialect", use_default=False)
