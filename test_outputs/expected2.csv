@@ -1,0 +1,5 @@
+,columns flagged by output filters,social security,employment status,employment status_example,favorite color,favorite color_example,from example3,from example
+0,employment status,123456,,Employed,,Red,False,True
+1,employment status_example,234111,employed,Unknown,Magenta,Green,True,True
+2,"employment status, employment status_example",1234321,,Unknown,Red,Yellow,True,True
+3,employment status,987654321,,Unemployed,,Orange,False,True
