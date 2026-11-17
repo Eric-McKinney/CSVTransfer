@@ -1,0 +1,6 @@
+,ssn,d.o.b,d.o.b_source3,employed,employed_source3,favorite color,favorite color_source3,from source1,from source3
+0,565,,,,employed,,Royal purple,False,True
+1,123456,3/24/1989,,Employed,,Red,,True,False
+2,234111,1/1/1970,1/1/1970,Unknown,employed,Green,Magenta,True,True
+3,1234321,5/31/2000,5/31/2000,Unknown,,Yellow,Red,True,True
+4,987654321,1/23/4567,,Unemployed,,Orange,,True,False
