@@ -5,6 +5,7 @@ import pandas as pd
 import pprint
 import re
 import sys
+from typing import List, Set, Dict, Any
 
 
 DEBUG = False
@@ -14,14 +15,14 @@ MINOR_SEP = "-" * 80
 
 def main():
     parser = argparse.ArgumentParser(
-            prog="csvtransfer",
-            description="Transfer, filter, and consolidate data from an \
-                    arbitrary number of csv files. Outputs results to \
-                    output.csv or output.xlsx by default based on the output \
-                    dialect.",
-            epilog="See the README for more info \
-                    <https://github.com/Eric-McKinney/CSVTransfer/blob/main/README.md>")
-    
+        prog="csvtransfer",
+        description="Transfer, filter, and consolidate data from an \
+                arbitrary number of csv files. Outputs results to \
+                output.csv or output.xlsx by default based on the output \
+                dialect.",
+        epilog="See the README for more info \
+                <https://github.com/Eric-McKinney/CSVTransfer/blob/main/README.md>")
+
     parser.add_argument("config_file_path", metavar="CONFIG_FILE",
                         help="the path to the configuration file")
     parser.add_argument("-o", "--outfile", metavar="OUTPUT_FILE",
@@ -69,7 +70,7 @@ def debug_print(msg: str, indent: int = 0, end: str = "\n") -> None:
         print(msg, file=sys.stderr, end=end)
 
 
-def parse_config(config_file_path: str) -> Dict[str,Dict[str,str]]:
+def parse_config(config_file_path: str) -> Dict[str, Dict[str, str]]:
     debug_print(f"finding configuration file {config_file_path}...")
 
     if not os.path.exists(os.path.join(os.getcwd(), config_file_path)):
@@ -94,7 +95,7 @@ def parse_config(config_file_path: str) -> Dict[str,Dict[str,str]]:
     return config
 
 
-def section_exists(config: Dict[str,Dict[str,str]], section_name: str) -> str:
+def section_exists(config: Dict[str, Dict[str, str]], section_name: str) -> str:
     if section_name not in config:
         return f"error: {section_name} section missing from config file\n"
 
@@ -113,11 +114,11 @@ def source_csv_exists(source_file: str) -> str:
     return ""
 
 
-def key_exists(config: Dict[str,Dict[str,str]], section_name: str, key: str,
+def key_exists(config: Dict[str, Dict[str, str]], section_name: str, key: str,
                use_default=True) -> str:
     default_exists = ("defaults" in config
-                 and key in config["defaults"]
-                 and config["defaults"][key] not in [None, ""])
+                      and key in config["defaults"]
+                      and config["defaults"][key] not in [None, ""])
 
     if section_name in config and (not use_default or not default_exists):
         if key not in config[section_name]:
@@ -128,7 +129,7 @@ def key_exists(config: Dict[str,Dict[str,str]], section_name: str, key: str,
     return ""
 
 
-def validate_output_dialect(config: Dict[str,Dict[str,str]]) -> str:
+def validate_output_dialect(config: Dict[str, Dict[str, str]]) -> str:
     valid_dialects = {"csv", "excel"}
     output_dialect = None
 
@@ -141,7 +142,7 @@ def validate_output_dialect(config: Dict[str,Dict[str,str]]) -> str:
     return ""
 
 
-def validate_config(config: Dict[str,Dict[str,str]]) -> None:
+def validate_config(config: Dict[str, Dict[str, str]]) -> None:
     error_msg = ""
     debug_print("validating configuration (error & warning messages printed after)...")
 
@@ -193,7 +194,7 @@ def split_by_commas(xs: str) -> List[str]:
     return xs.split(",")
 
 
-def parse_source_config_fields(config: Dict[str,Dict[str,str]]) -> None:
+def parse_source_config_fields(config: Dict[str, Dict[str, str]]) -> None:
     # extra parsing to get source config fields into more useful data types
     for source_name in config["sources"]:
         source = config[source_name]
@@ -212,7 +213,7 @@ def parse_source_config_fields(config: Dict[str,Dict[str,str]]) -> None:
             config[remapping_section] = {}
 
 
-def remap_column(config: Dict[str,Dict[str,Any]], source_name: str, header: str) -> str:
+def remap_column(config: Dict[str, Dict[str, Any]], source_name: str, header: str) -> str:
     remapping_section_name = f"{source_name}_column_remapping"
     if remapping_section_name not in config:
         return header
@@ -226,7 +227,7 @@ def remap_column(config: Dict[str,Dict[str,Any]], source_name: str, header: str)
     return remapping_section[header]
 
 
-def get_output_columns(config: Dict[str,Dict[str,Any]]) -> List[str]:
+def get_output_columns(config: Dict[str, Dict[str, Any]]) -> List[str]:
     join_cols: Set[str] = set()
     data_cols: Set[str] = set()
     debug_print("getting full list of output columns...")
@@ -261,7 +262,7 @@ def get_output_columns(config: Dict[str,Dict[str,Any]]) -> List[str]:
     return output_columns
 
 
-def validate_output_filters(config: Dict[str,Dict[str,Any]],
+def validate_output_filters(config: Dict[str, Dict[str, Any]],
                             output_columns: List[str]) -> None:
     warn_msg = ""
     debug_print("validating output filters...")
@@ -282,7 +283,7 @@ def validate_output_filters(config: Dict[str,Dict[str,Any]],
         print(warn_msg.rstrip(), file=sys.stderr)
 
 
-def add_duplicate_filters(config: Dict[str, Dict[str,Any]],
+def add_duplicate_filters(config: Dict[str, Dict[str, Any]],
                           output_columns: List[str]) -> None:
     debug_print("adding output filters for duplicated column names...")
     duplicate_filters = {}
@@ -299,7 +300,7 @@ def add_duplicate_filters(config: Dict[str, Dict[str,Any]],
         pprint.pp(config["output_filters"], stream=sys.stderr)
 
 
-def set_default_configurations(config: Dict[str,Dict[str,Any]]) -> None:
+def set_default_configurations(config: Dict[str, Dict[str, Any]]) -> None:
     debug_print("setting default values in configuration...")
     for source in config["sources"]:
         for key in config["defaults"]:
@@ -315,7 +316,7 @@ def set_default_configurations(config: Dict[str,Dict[str,Any]]) -> None:
                 config[source][key] = default_key
 
 
-def read_and_transfer_data_to_output(config: Dict[str,Dict[str,Any]],
+def read_and_transfer_data_to_output(config: Dict[str, Dict[str, Any]],
                                      output_df: pd.DataFrame,
                                      output_columns: List[str]) -> pd.DataFrame:
     debug_print("collecting source data into output data...")
@@ -346,7 +347,7 @@ def read_and_transfer_data_to_output(config: Dict[str,Dict[str,Any]],
     return output_df
 
 
-def read_source(config: Dict[str,Dict[str,Any]], source_name: str) -> pd.DataFrame:
+def read_source(config: Dict[str, Dict[str, Any]], source_name: str) -> pd.DataFrame:
     debug_print(f"reading source {source_name}'s data...", indent=1)
     source_section = config[source_name]
     csv_file = config["sources"][source_name]
@@ -362,7 +363,7 @@ def read_source(config: Dict[str,Dict[str,Any]], source_name: str) -> pd.DataFra
     return source_df
 
 
-def join_data_to_output(config: Dict[str,Dict[str,Any]], source_name: str,
+def join_data_to_output(config: Dict[str, Dict[str, Any]], source_name: str,
                         source_df: pd.DataFrame,
                         output_df: pd.DataFrame) -> pd.DataFrame:
     debug_print(f"joining source {source_name}'s data with output data...", indent=1)
@@ -388,9 +389,9 @@ def join_data_to_output(config: Dict[str,Dict[str,Any]], source_name: str,
     return output_df
 
 
-def check_filters(filters: Dict[str,str], row: pd.Series) -> str:
+def check_filters(filters: Dict[str, str], row: pd.Series) -> str:
     debug_print(f"checking row {row.name}...", indent=1)
-    debug_print(f"dumping row...", indent=2)
+    debug_print("dumping row...", indent=2)
     debug_print(row)
 
     filters_not_matched = ""
@@ -421,7 +422,7 @@ def check_filters(filters: Dict[str,str], row: pd.Series) -> str:
     return filters_not_matched
 
 
-def apply_output_filters(filters: Dict[str,str], output_df: pd.DataFrame) -> None:
+def apply_output_filters(filters: Dict[str, str], output_df: pd.DataFrame) -> None:
     debug_print("checking if each row passes output filters...")
     filter_results = output_df.apply(lambda x: check_filters(filters, x), axis=1)
     output_df.insert(0, "columns flagged by output filters", filter_results)
@@ -437,7 +438,7 @@ def add_file_extension_if_missing(file_name: str, extension: str) -> str:
     return file_name
 
 
-def write_output_data(config: Dict[str,Dict[str,Any]], file_name: str,
+def write_output_data(config: Dict[str, Dict[str, Any]], file_name: str,
                       output_df: pd.DataFrame) -> None:
     dialect = config["output"]["dialect"]
     debug_print(f"writing output data to {file_name}...")
