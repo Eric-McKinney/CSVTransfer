@@ -5,11 +5,18 @@ arbitrary number of csv files into a single csv file.
 
 ## Setup
 
-Download `csvtransfer.py`, `config_template.ini`, and optionally this `README.md` for
-future reference. Next, make sure you have python 3 installed. Finally, you
-need to fill out the config template as described further down in this README.
-Alternatively, download and run the script `config_gen.sh` from this repo to
-interactively create a config file without worrying too much about the syntax.
+### Dependencies
+
+- python 3
+- pandas (>= 3.0.6)
+
+### Install Process
+
+Download `csvtransfer.py`, `config_template.ini`, and optionally this
+`README.md` for future reference. Next, fill out the config template as
+described further down in this README. Alternatively, download and run the bash
+script `config_gen.sh` from this repo to interactively create a config file
+without worrying too much about the syntax.
 
 ## Usage
 
